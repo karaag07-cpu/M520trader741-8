@@ -35,14 +35,18 @@ class StockDataFetcher:
         Fetches historical bars for a stock asset using Alpaca.
         """
         # Map string timeframe to Alpaca TimeFrame
-        tf_map = {
-            '1m': TimeFrame.Minute,
-            '5m': TimeFrame.Minute * 5,
-            '15m': TimeFrame.Minute * 15,
-            '1h': TimeFrame.Hour,
-            '1d': TimeFrame.Day
-        }
-        alpaca_tf = tf_map.get(timeframe, TimeFrame.Minute * 15)
+        if timeframe == '1m':
+            alpaca_tf = TimeFrame.Minute
+        elif timeframe == '5m':
+            alpaca_tf = TimeFrame(5, TimeFrame.Minute.unit)
+        elif timeframe == '15m':
+            alpaca_tf = TimeFrame(15, TimeFrame.Minute.unit)
+        elif timeframe == '1h':
+            alpaca_tf = TimeFrame.Hour
+        elif timeframe == '1d':
+            alpaca_tf = TimeFrame.Day
+        else:
+            alpaca_tf = TimeFrame(15, TimeFrame.Minute.unit)
         
         # Calculate start time based on limit and timeframe
         # This is a simplification; for a precise 'limit' bars, we'd need more complex logic

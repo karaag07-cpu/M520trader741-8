@@ -1,8 +1,13 @@
 import time
+import os
 from config.config_loader import load_config
 from utils.logger import setup_logger
 from utils.mock_data import generate_mock_ohlcv
 from signals.momentum_strategy import MomentumStrategy
+from signals.relative_strength import RelativeStrengthStrategy
+from signals.cross_asset import CrossAssetStrategy
+from signals.onchain_sentiment import OnChainSentimentStrategy
+from signals.macro_regime import MacroRegimeStrategy
 from signals.combiner import SignalCombiner
 from signals.base_strategy import SignalType
 from risk.risk_manager import RiskManager
@@ -12,7 +17,7 @@ from data.fetchers import DataPipeline
 def main():
     # 1. Setup
     logger = setup_logger('MinuteTrader', '/home/team/shared/trading_bot/logs/bot.log')
-    logger.info("Starting MinuteTrader Bot...")
+    logger.info("Starting MinuteTrader Bot with full Strategy Ensemble...")
     
     config = load_config()
     risk_manager = RiskManager(risk_reward_ratio=config.get('trading', {}).get('default_risk_reward', 3.0))
@@ -26,98 +31,149 @@ def main():
     
     # Initialize strategies
     strategies = [
-        MomentumStrategy("EMA+VWAP Scalp", "15m")
+        MomentumStrategy("EMA+VWAP Scalp", "15m"),
+        RelativeStrengthStrategy("RS Flow", "15m"),
+        CrossAssetStrategy("Cross-Asset Leader", "15m"),
+        OnChainSentimentStrategy("On-Chain Sentiment", "1h"),
+        MacroRegimeStrategy("Macro Filter", "1d")
     ]
     
-    logger.info("Bot initialized and entering main loop")
+    logger.info(f"Initialized {len(strategies)} strategies")
     
-    # Symbols to track (from config or hardcoded for test)
+    # Symbols to track
     symbols_to_fetch = {
-        'crypto': ['BTC/USDT', 'ETH/USDT'],
-        'macro': ['T10Y2Y']
+        'crypto': ['BTC/USDT', 'ETH/USDT', 'SOL/USDT'],
+        'stocks': ['AAPL', 'TSLA', 'QQQ'],
+        'forex': ['EUR/USD', 'GBP/USD'],
+        'macro': ['T10Y2Y', 'CPIAUCSL', 'FEDFUNDS', 'UNRATE']
     }
     
+    KILLSWITCH_PATH = 'killswitch.lock'
+    
     try:
-        for i in range(10):  # Run 10 iterations for demo
-            logger.info(f"--- Iteration {i+1} ---")
+        while True: # Run continuously
+            # 0. Kill Switch Check
+            if os.path.exists(KILLSWITCH_PATH):
+                logger.warning("Kill Switch activated! Stopping bot and skipping cycles.")
+                # Optional: Close all positions if real
+                time.sleep(10)
+                continue
+
+            logger.info("--- New Market Cycle ---")
             
             # 2. Data Fetching
             data_results = pipeline.fetch_all(symbols_to_fetch)
             
-            # Fallback to mock data if real data is missing (e.g. no API keys)
-            all_symbols = symbols_to_fetch.get('crypto', []) + symbols_to_fetch.get('stocks', []) + symbols_to_fetch.get('forex', [])
+            # Extract Macro Data for global filtering
+            macro_context = data_results.get('macro', {})
+            # Simplified: just using current values
+            
+            # 3. Global Macro Filter
+            macro_signal = None
+            pos_size_modifier = 1.0
+            for strategy in strategies:
+                if isinstance(strategy, MacroRegimeStrategy):
+                    # Map FRED series to logic parameters
+                    params = {
+                        'yc_spread': macro_context.get('T10Y2Y', 1.0),
+                        'inflation_yoy': macro_context.get('CPIAUCSL', 2.0),
+                        'fed_rate_trend': "Stable" # For now, can be calculated from history
+                    }
+                    macro_signal = strategy.generate_signal(None, **params)
+                    if macro_signal:
+                        pos_size_modifier = macro_signal.metadata.get('position_size_modifier', 1.0)
+                        logger.info(f"Macro Regime: {macro_signal.metadata['regime']} (Bias: {macro_signal.metadata['global_bias']}, Modifier: {pos_size_modifier})")
+            
+            # 4. Process each Asset Class
+            all_symbols = symbols_to_fetch['crypto'] + symbols_to_fetch['stocks'] + symbols_to_fetch['forex']
             
             for symbol in all_symbols:
                 # Find data in results
                 df = None
-                if symbol in data_results['crypto']:
-                    df = data_results['crypto'][symbol]
-                elif symbol in data_results['stocks']:
-                    df = data_results['stocks'][symbol]
-                elif symbol in data_results['forex']:
-                    df = data_results['forex'][symbol]
+                if symbol in data_results['crypto']: df = data_results['crypto'][symbol]
+                elif symbol in data_results['stocks']: df = data_results['stocks'][symbol]
+                elif symbol in data_results['forex']: df = data_results['forex'][symbol]
                 
                 # GRACEFUL FALLBACK
                 if df is None or df.empty:
-                    # logger.warning(f"No real data for {symbol}, falling back to mock.")
                     df = generate_mock_ohlcv(symbol, length=300)
                 
-                # Ensure symbol attribute is set for strategies that need it
                 df.attrs['symbol'] = symbol
                 
-                # 3. Signal Generation
+                # 5. Signal Generation
                 signals = []
                 for strategy in strategies:
-                    sig = strategy.generate_signal(df)
+                    if isinstance(strategy, MacroRegimeStrategy): continue
+                    
+                    # Some strategies might need extra context
+                    kwargs = {}
+                    if isinstance(strategy, CrossAssetStrategy):
+                        kwargs['leaders'] = {
+                            'BTC': data_results['crypto'].get('BTC/USDT'),
+                            'DXY': data_results['forex'].get('UUP'), # Proxy
+                            'US10Y': data_results['macro'].get('T10Y2Y')
+                        }
+                    elif isinstance(strategy, RelativeStrengthStrategy):
+                        # Use appropriate benchmark
+                        if symbol in symbols_to_fetch['crypto']:
+                            kwargs['benchmark_data'] = data_results['crypto'].get('BTC/USDT')
+                        elif symbol in symbols_to_fetch['stocks']:
+                            kwargs['benchmark_data'] = data_results['stocks'].get('SPY')
+                    
+                    sig = strategy.generate_signal(df, **kwargs)
                     if sig:
                         sig.metadata['strategy_name'] = strategy.name
                         signals.append(sig)
                 
-                # 4. Signal Combination
+                # 6. Signal Combination
                 combined_signal = combiner.combine(signals, symbol)
                 
                 if combined_signal and combined_signal.type != SignalType.NEUTRAL:
+                    # Apply Macro Position Size Modifier
+                    if pos_size_modifier <= 0:
+                        logger.info(f"Skipping {symbol} {combined_signal.type} due to Bearish Macro Bias")
+                        continue
+
                     logger.info(f"Consensus Signal for {symbol}: {combined_signal.type} ({combined_signal.conviction.name})")
-                    logger.info(f"Details: {combined_signal.metadata['contributions']}")
                     
                     current_price = df['close'].iloc[-1]
                     
-                    # 5. Risk Management
+                    # 7. Risk Management
                     levels = risk_manager.calculate_trade_levels(
                         combined_signal.type.value, 
                         current_price
                     )
                     
                     if levels:
-                        combined_signal.entry_zone = levels['entry_zone']
-                        combined_signal.tp_levels = levels['tp_levels']
-                        combined_signal.stop_loss = levels['stop_loss']
+                        # 8. Execution
+                        entry_price = (levels['entry_zone'][0] + levels['entry_zone'][1]) / 2
                         
-                        # 6. Execution
-                        entry_price = (combined_signal.entry_zone[0] + combined_signal.entry_zone[1]) / 2
-                        logger.info(f"Executing paper trade: {symbol} at {entry_price:.2f}")
+                        # Position sizing with modifier
+                        base_amount = 0.1 # Simplified
+                        final_amount = base_amount * pos_size_modifier
+                        
+                        logger.info(f"Executing paper trade: {symbol} at {entry_price:.2f} (Amount: {final_amount})")
                         
                         paper_trader.place_order(
                             symbol, 
                             combined_signal.type.value, 
-                            0.1, 
+                            final_amount, 
                             entry_price,
-                            stop_loss=combined_signal.stop_loss,
-                            take_profit=combined_signal.tp_levels[0]
+                            stop_loss=levels['stop_loss'],
+                            take_profit=levels['tp_levels'][0]
                         )
             
-            # Update positions with current prices
+            # 9. Update positions
             current_market_prices = {}
             for s in all_symbols:
-                # Again, try real data first for price update
-                # (Simplified: just using the last close from 'df' above or fresh mock)
+                # Mock current price for update (or use real if available)
                 latest = generate_mock_ohlcv(s, length=1)
                 current_market_prices[s] = latest['close'].iloc[0]
                 
             paper_trader.update_positions(current_market_prices)
             
             logger.info(f"Current Balance: {paper_trader.balance:.2f}")
-            time.sleep(1)
+            time.sleep(60) # Wait 60s for next cycle
             
     except KeyboardInterrupt:
         logger.info("Bot stopped by user")

@@ -1,3 +1,5 @@
+from utils.db_logger import log_trade_attempt
+
 class PaperTrader:
     def __init__(self, initial_balance=100000):
         self.balance = initial_balance
@@ -8,6 +10,12 @@ class PaperTrader:
         """
         Simulates placing an order and returns a trade record.
         """
+        # Check if we have enough balance
+        total_cost = amount * price
+        if total_cost > self.balance:
+            log_trade_attempt(symbol, side, amount, price, "REJECTED", "Insufficient funds")
+            return None
+
         trade = {
             'symbol': symbol,
             'side': side,
@@ -19,6 +27,7 @@ class PaperTrader:
             'timestamp': 'now'
         }
         self.positions[symbol] = trade
+        log_trade_attempt(symbol, side, amount, price, "EXECUTED", "Paper fill")
         return trade
 
     def update_positions(self, current_prices):

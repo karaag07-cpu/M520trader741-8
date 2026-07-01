@@ -6,11 +6,14 @@ MinuteTrader is a multi-asset automated trading bot designed to exploit micro-in
 The project is currently in the **Paper Trading / Backtesting** phase. No real capital is deployed.
 
 ## Core Features
-- **Multi-Asset Support**: Integrated with Alpaca (Stocks), Binance/Bybit (Crypto), and OANDA (Forex).
+- **Multi-Asset Support**: Primary data via **Alpaca** (stocks **and** crypto on one provider), with optional Binance (crypto) and OANDA (forex) fallbacks, and **FRED** for macro series.
 - **High-Frequency Signals**: 5 distinct strategy modules providing timeframe-tagged signals (15m scalp to daily swing).
-- **Unified Risk Manager**: Calculates Entry Zones, dynamic Take-Profit targets, and strict Stop-Loss levels (minimum 1:3 Risk-to-Reward).
+- **Unified Risk Manager**: Fixed-fractional position sizing with volatility-adaptive (ATR) stop-loss / take-profit levels (minimum 1:3 Risk-to-Reward) and buying-power limits across concurrent positions.
 - **Signal Combiner**: Aggregates signals from multiple strategies and scales conviction based on alignment.
 - **Paper Trading Engine**: Real-time simulation of trade execution and P&L tracking.
+- **Live Dashboard**: Website page showing balance, open positions, PnL, and macro regime, auto-refreshing every 15s.
+- **Broker Reconciliation**: Diffs the bot's positions against a broker snapshot and flags drift.
+- **Schedulable**: Run continuously or as single cron-driven cycles (`--once`).
 
 ## Strategy Summary
 1. **Momentum + Volume Confirmation**: EMA crossovers (9/21) confirmed by volume spikes and VWAP trend.
@@ -39,13 +42,79 @@ pip install -r requirements.txt
 ```
 
 ### Configuration
-1. Copy the example config: `cp config/settings.yaml.example config/settings.yaml`
-2. Update `config/settings.yaml` with your API keys (Alpaca, Binance, OANDA, FRED).
-3. Set environment variables if not using the config file for secrets.
+
+Secrets live in a `.env` file at the project root — **never** commit it (it's
+gitignored). `config/settings.yaml` references them as `${VAR}` placeholders
+which are expanded from the environment at load time.
+
+1. Create `.env` from the template:
+   ```bash
+   cp .env.example .env
+   ```
+2. Fill in your keys. **Alpaca** (paper trading) is the primary provider and
+   covers both stocks and crypto; **FRED** is optional (real macro data):
+   ```bash
+   ALPACA_API_KEY=your_paper_key
+   ALPACA_API_SECRET=your_paper_secret
+   FRED_API_KEY=your_fred_key          # optional
+   ```
+   Get free Alpaca **paper** keys at https://app.alpaca.markets and a free FRED
+   key at https://fredaccount.stlouisfed.org/apikeys.
+
+   With no keys set, every data source falls back to deterministic **mock
+   data**, so the bot still runs end-to-end for development.
+
+3. Verify connectivity before running (checks account auth + market data):
+   ```bash
+   python scripts/check_alpaca.py      # expect ✅ ✅
+   ```
 
 ### Running the Bot
+
 ```bash
-python main.py
+python main.py                 # run continuously (default 60s cycles)
+python main.py --interval 30   # custom cycle interval (seconds)
+python main.py --once          # run a single cycle and exit (for cron/schedulers)
+python main.py --cycles 10     # run N cycles then stop
+```
+
+Each cycle fetches data, runs the strategy ensemble, paper-trades with
+risk-managed sizing, and publishes a snapshot to `website/status.json`.
+
+To halt trading immediately, create a `killswitch.lock` file in the project
+root; delete it to resume.
+
+### Live Dashboard
+
+The website surfaces the bot's live state (balance, open positions, PnL, macro
+regime, broker reconciliation) and auto-refreshes every 15s.
+
+```bash
+cd website
+bun install        # first time only
+bun run publish    # build + serve on http://localhost:3000
+```
+
+Open `http://localhost:3000/dashboard`. Until the bot has run, it shows an
+"awaiting first snapshot" state.
+
+### Broker Reconciliation (optional)
+
+The bot can diff its positions against your real broker holdings and flag any
+drift on the dashboard. Provide a snapshot file (any broker):
+
+```bash
+cp broker_snapshot.example.json broker_snapshot.json   # then edit with real positions
+```
+
+`broker_snapshot.json` is gitignored. Override its location with
+`MINUTETRADER_BROKER_SNAPSHOT`.
+
+### Testing
+
+```bash
+python -m pytest -q          # Python test suite
+cd website && bun run build  # type-check / build the site
 ```
 
 ## Contributing

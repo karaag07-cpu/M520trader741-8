@@ -6,6 +6,42 @@ from datetime import datetime, timedelta
 # fetchers that use them, so importing this module — e.g. for the FRED macro
 # fetcher or a single asset class — doesn't require every broker SDK installed.
 
+_OHLCV_COLUMNS = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
+
+
+def normalize_alpaca_bars(df, symbol):
+    """Normalise an Alpaca ``BarSet.df`` to the bot's standard OHLCV frame.
+
+    Alpaca returns a MultiIndex (symbol, timestamp) frame with extra columns
+    (trade_count, vwap). Downstream strategies expect a flat frame with
+    ``timestamp, open, high, low, close, volume`` columns and the symbol on
+    ``df.attrs['symbol']``. Returns an empty (well-formed) frame when there is
+    no data.
+    """
+    if df is None or len(df) == 0:
+        empty = pd.DataFrame(columns=_OHLCV_COLUMNS)
+        empty.attrs['symbol'] = symbol
+        return empty
+
+    out = df
+    if isinstance(out.index, pd.MultiIndex):
+        level0 = out.index.get_level_values(0)
+        out = out.xs(symbol, level=0) if symbol in level0 else out.droplevel(0)
+
+    out = out.reset_index()
+    ts_col = 'timestamp' if 'timestamp' in out.columns else out.columns[0]
+
+    result = pd.DataFrame({
+        'timestamp': pd.to_datetime(out[ts_col]),
+        'open': out['open'],
+        'high': out['high'],
+        'low': out['low'],
+        'close': out['close'],
+        'volume': out['volume'],
+    })
+    result.attrs['symbol'] = symbol
+    return result
+
 
 class CryptoDataFetcher:
     def __init__(self, exchange_id='binance', use_testnet=True):
@@ -62,8 +98,7 @@ class StockDataFetcher:
             start=start
         )
         bars = self.client.get_stock_bars(request_params)
-        df = bars.df
-        return df
+        return normalize_alpaca_bars(bars.df, symbol)
 
 class ForexDataFetcher:
     def __init__(self, access_token=None, account_id=None, environment='practice'):

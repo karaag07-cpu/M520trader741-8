@@ -1,10 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300;400;600&family=Outfit:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300;400;600&family=Outfit:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&display=swap');
 @import "tailwindcss";
 
 @layer base {
   html,
   body {
-    @apply bg-[#f2f0e4] text-[#3d4234] antialiased dark:bg-[#1a1c17] dark:text-[#e4e9d6];
+    @apply bg-[#faf7f2] text-[#3d4234] antialiased dark:bg-[#1a1c17] dark:text-[#e4e9d6];
     font-family: 'Outfit', sans-serif;
   }
 
@@ -12,49 +12,54 @@
     font-family: 'Josefin Sans', sans-serif;
     @apply tracking-wide uppercase;
   }
+
+  .font-botanical {
+    font-family: 'Cormorant Garamond', serif;
+  }
 }
 
-.pillowy-card {
-  @apply relative rounded-[2rem] border border-[#a8b08e]/30 bg-white/40 p-8 backdrop-blur-sm transition-all duration-500 hover:shadow-2xl hover:shadow-[#a8b08e]/20 dark:bg-white/5;
-  box-shadow: 0 15px 45px -15px rgba(168, 176, 142, 0.15);
+.organic-card {
+  @apply relative rounded-[3rem] border border-[#d6cec2] bg-white/30 p-10 backdrop-blur-md transition-all duration-700 hover:bg-white/50 dark:bg-white/5;
+  box-shadow: 0 20px 50px -20px rgba(168, 176, 142, 0.2);
 }
 
-.pillowy-card::before {
-  content: '';
-  @apply absolute inset-0 rounded-[2rem] border border-white/20 pointer-events-none;
+/* Asymmetrical Rounded Corners */
+.organic-shape-1 {
+  border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
 }
 
-.thin-accent-border {
-  @apply relative py-12;
+.organic-shape-2 {
+  border-radius: 30% 70% 70% 30% / 50% 60% 40% 50%;
 }
 
-.thin-accent-border::before, .thin-accent-border::after {
-  content: '';
-  @apply absolute left-1/2 -translate-x-1/2 w-12 h-px bg-[#c5a059]/40;
+.botanical-gradient {
+  background: linear-gradient(135deg, #f5d0d0 0%, #d6b5ff 50%, #a8b08e 100%);
 }
 
-.thin-accent-border::before {
-  @apply top-0;
+.soft-glow {
+  filter: blur(80px);
+  opacity: 0.4;
 }
 
-.thin-accent-border::after {
-  @apply bottom-0;
+.botanical-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30,20 Q50,0 70,20 T30,20' fill='none' stroke='%23a8b08e' stroke-width='0.5' opacity='0.2'/%3E%3Cpath d='M10,80 Q30,60 50,80 T10,80' fill='none' stroke='%23e8a5a5' stroke-width='0.5' opacity='0.2'/%3E%3Ccircle cx='80' cy='50' r='1' fill='%23d6b5ff' opacity='0.2'/%3E%3C/svg%3E");
+  background-size: 150px 150px;
 }
 
-.muted-gold-divider {
-  @apply w-16 h-px bg-[#c5a059]/30 mx-auto my-8;
+.floating-botanical {
+  @apply animate-pulse pointer-events-none;
 }
 
-.line-art-bg {
-  background-image: radial-gradient(#a8b08e 0.5px, transparent 0.5px);
-  background-size: 24px 24px;
-  opacity: 0.15;
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  z-index: 0;
+.selection-botanical {
+  @apply selection:bg-[#f5d0d0] selection:text-[#3d4234];
 }
 
-.selection-60s {
-  @apply selection:bg-[#d6b5ff]/30 selection:text-[#3d4234];
+@keyframes slow-drift {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(20px, 15px) rotate(5deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+.animate-drift {
+  animation: slow-drift 15s ease-in-out infinite;
 }

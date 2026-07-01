@@ -1,42 +1,48 @@
-@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300;400;600&family=Outfit:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300;400;600;700&family=Outfit:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
 @import "tailwindcss";
 
 @layer base {
   html,
   body {
-    @apply bg-[#faf7f2] text-[#3d4234] antialiased dark:bg-[#1a1c17] dark:text-[#e4e9d6];
+    @apply bg-[#faf7f2] text-[#1a1c17] antialiased dark:bg-[#0d0e0a] dark:text-[#f2f5e4];
     font-family: 'Outfit', sans-serif;
+    font-weight: 500;
   }
   h1, h2, h3, h4 {
     font-family: 'Josefin Sans', sans-serif;
-    @apply tracking-wide uppercase;
+    @apply tracking-wide uppercase font-bold;
   }
   .font-botanical {
     font-family: 'Cormorant Garamond', serif;
+    font-weight: 600;
   }
 }
 
 .organic-card {
-  @apply relative rounded-[3rem] border-2 border-[#d6cec2] bg-white/70 p-10 backdrop-blur-md transition-all duration-700 hover:bg-white/90 dark:bg-white/10;
-  box-shadow: 0 20px 50px -20px rgba(168, 176, 142, 0.4);
+  @apply relative rounded-[3rem] border-2 border-[#d6cec2] bg-white/80 p-12 backdrop-blur-md transition-all duration-700 hover:bg-white/95 dark:bg-black/40 text-center flex flex-col items-center justify-center;
+  box-shadow: 0 25px 60px -15px rgba(26, 28, 23, 0.3);
 }
 
 /* Bolder Border Colors */
-.border-rose { border-color: #e8a5a5; }
-.border-lavender { border-color: #d6b5ff; }
-.border-sage { border-color: #a8b08e; }
-.border-blush { border-color: #f5d0d0; }
+.border-rose { border-color: #d68585; }
+.border-lavender { border-color: #b585ff; }
+.border-sage { border-color: #88906e; }
+.border-blush { border-color: #e8a5a5; }
 
 /* Fuller Opacity Backgrounds */
-.bg-rose-soft { @apply bg-[#e8a5a5]/20; }
-.bg-lavender-soft { @apply bg-[#d6b5ff]/20; }
-.bg-sage-soft { @apply bg-[#a8b08e]/20; }
-.bg-blush-soft { @apply bg-[#f5d0d0]/20; }
+.bg-rose-soft { @apply bg-[#e8a5a5]/30; }
+.bg-lavender-soft { @apply bg-[#d6b5ff]/30; }
+.bg-sage-soft { @apply bg-[#a8b08e]/30; }
+.bg-blush-soft { @apply bg-[#f5d0d0]/30; }
 
-/* Saturated Text */
-.text-rose-bold { color: #d68585; }
-.text-lavender-bold { color: #b585ff; }
-.text-sage-bold { color: #88906e; }
+/* Saturated Text - Near Black versions of the colors for readability */
+.text-rose-bold { color: #8a4a4a; }
+.text-lavender-bold { color: #5a4a8a; }
+.text-sage-bold { color: #3d4234; }
+
+.dark .text-rose-bold { color: #f5d0d0; }
+.dark .text-lavender-bold { color: #e4d6ff; }
+.dark .text-sage-bold { color: #d6dec2; }
 
 /* Asymmetrical Rounded Corners */
 .organic-shape-1 {
@@ -52,11 +58,11 @@
 
 .soft-glow {
   filter: blur(80px);
-  opacity: 0.6;
+  opacity: 0.7;
 }
 
 .botanical-pattern {
-  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30,20 Q50,0 70,20 T30,20' fill='none' stroke='%23a8b08e' stroke-width='1' opacity='0.4'/%3E%3Cpath d='M10,80 Q30,60 50,80 T10,80' fill='none' stroke='%23e8a5a5' stroke-width='1' opacity='0.4'/%3E%3Ccircle cx='80' cy='50' r='2' fill='%23d6b5ff' opacity='0.4'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30,20 Q50,0 70,20 T30,20' fill='none' stroke='%23a8b08e' stroke-width='1.5' opacity='0.5'/%3E%3Cpath d='M10,80 Q30,60 50,80 T10,80' fill='none' stroke='%23e8a5a5' stroke-width='1.5' opacity='0.5'/%3E%3Ccircle cx='80' cy='50' r='2.5' fill='%23d6b5ff' opacity='0.5'/%3E%3C/svg%3E");
   background-size: 150px 150px;
 }
 
@@ -65,7 +71,7 @@
 }
 
 .selection-botanical {
-  @apply selection:bg-[#e8a5a5] selection:text-[#3d4234];
+  @apply selection:bg-[#e8a5a5] selection:text-white;
 }
 
 @keyframes slow-drift {
@@ -79,5 +85,5 @@
 }
 
 .flower-accent {
-  @apply absolute pointer-events-none opacity-80 transition-transform duration-1000 group-hover:scale-110;
+  @apply absolute pointer-events-none opacity-90 transition-transform duration-1000 group-hover:scale-110;
 }

@@ -44,7 +44,7 @@ def main():
     
     # Symbols to track
     symbols_to_fetch = {
-        'crypto': ['BTC/USDT', 'ETH/USDT', 'SOL/USDT'],
+        'crypto': ['BTC/USD', 'ETH/USD', 'SOL/USD'],  # Alpaca crypto symbol format
         'stocks': ['AAPL', 'TSLA', 'QQQ'],
         'forex': ['EUR/USD', 'GBP/USD'],
         'macro': ['T10Y2Y', 'CPIAUCSL', 'FEDFUNDS', 'UNRATE']
@@ -111,14 +111,14 @@ def main():
                     kwargs = {}
                     if isinstance(strategy, CrossAssetStrategy):
                         kwargs['leaders'] = {
-                            'BTC': data_results['crypto'].get('BTC/USDT'),
+                            'BTC': data_results['crypto'].get('BTC/USD'),
                             'DXY': data_results['forex'].get('UUP'), # Proxy
                             'US10Y': data_results['macro'].get('T10Y2Y')
                         }
                     elif isinstance(strategy, RelativeStrengthStrategy):
                         # Use appropriate benchmark
                         if symbol in symbols_to_fetch['crypto']:
-                            kwargs['benchmark_data'] = data_results['crypto'].get('BTC/USDT')
+                            kwargs['benchmark_data'] = data_results['crypto'].get('BTC/USD')
                         elif symbol in symbols_to_fetch['stocks']:
                             kwargs['benchmark_data'] = data_results['stocks'].get('SPY')
                     

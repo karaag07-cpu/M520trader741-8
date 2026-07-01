@@ -36,13 +36,21 @@
 .bg-blush-soft { @apply bg-[#f5d0d0]/30; }
 
 /* Saturated Text - Near Black versions of the colors for readability */
-.text-rose-bold { color: #8a4a4a; }
-.text-lavender-bold { color: #5a4a8a; }
-.text-sage-bold { color: #3d4234; }
+.text-rose-bold { color: #5a2a2a; }
+.text-lavender-bold { color: #3a2a5a; }
+.text-sage-bold { color: #2d3321; }
+
+.bg-rose-bold { @apply bg-[#8a4a4a]; }
+.bg-lavender-bold { @apply bg-[#5a4a8a]; }
+.bg-sage-bold { @apply bg-[#3d4234]; }
 
 .dark .text-rose-bold { color: #f5d0d0; }
 .dark .text-lavender-bold { color: #e4d6ff; }
 .dark .text-sage-bold { color: #d6dec2; }
+
+.dark .bg-rose-bold { @apply bg-[#5a2a2a]; }
+.dark .bg-lavender-bold { @apply bg-[#3a2a5a]; }
+.dark .bg-sage-bold { @apply bg-[#2d3321]; }
 
 /* Asymmetrical Rounded Corners */
 .organic-shape-1 {

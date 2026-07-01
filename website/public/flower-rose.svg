@@ -1,11 +1,21 @@
-
 <svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
-  <g fill="#e8a5a5">
-    <path d="M200,150 Q230,120 260,150 T200,200 Q170,120 200,150 Z" />
-    <path d="M200,160 Q250,110 300,160 T200,240 Q150,110 200,160 Z" opacity="0.8" />
-    <path d="M200,170 Q280,100 340,170 T200,280 Q120,100 200,170 Z" opacity="0.6" />
+  <defs>
+    <radialGradient id="roseGrad" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:#ff8a8a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8a2a2a;stop-opacity:1" />
+    </radialGradient>
+  </defs>
+  <g transform="translate(200, 180)">
+    <!-- Outer petals -->
+    <path d="M0,0 Q60,-120 120,0 T0,120 Q-120,60 -60,-60 Z" fill="url(#roseGrad)" opacity="0.9" />
+    <path d="M0,0 Q-60,-120 -120,0 T0,120 Q120,60 60,-60 Z" fill="url(#roseGrad)" opacity="0.8" transform="rotate(45)" />
+    <path d="M0,0 Q60,-120 120,0 T0,120 Q-120,60 -60,-60 Z" fill="url(#roseGrad)" opacity="0.7" transform="rotate(90)" />
+    <path d="M0,0 Q-60,-120 -120,0 T0,120 Q120,60 60,-60 Z" fill="url(#roseGrad)" opacity="0.6" transform="rotate(135)" />
+    <!-- Inner bloom -->
+    <circle cx="0" cy="0" r="40" fill="#5a1a1a" />
+    <path d="M-20,-20 Q0,-50 20,-20 T0,20 Q-20,20 -20,-20" fill="#8a4a4a" />
   </g>
-  <path d="M200,280 L200,380" stroke="#636b51" stroke-width="4" />
-  <path d="M200,320 Q160,300 140,320 T200,350" fill="#636b51" />
-  <path d="M200,340 Q240,320 260,340 T200,370" fill="#636b51" />
+  <path d="M200,300 Q210,350 200,400" stroke="#2d3321" stroke-width="8" fill="none" />
+  <path d="M200,340 Q150,320 120,360 Q150,380 200,350" fill="#3d4234" />
+  <path d="M200,360 Q250,340 280,380 Q250,400 200,370" fill="#3d4234" />
 </svg>

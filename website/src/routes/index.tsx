@@ -124,12 +124,12 @@ function Home() {
           {businessName || "MinuteTrader"}
         </h1>
         
-        <p className="max-w-4xl text-3xl md:text-5xl font-botanical italic text-[#2c2f26] dark:text-[#d6dec2] leading-tight mb-20 px-4">
+        <p className="max-w-4xl text-3xl md:text-5xl font-botanical italic text-[#1a1c17] dark:text-[#f2f5e4] leading-tight mb-20 px-4">
           Nurturing digital assets <br className="hidden md:block" /> 
           with the precision of a master gardener.
         </p>
 
-        <div className="inline-flex items-center gap-10 px-16 py-8 rounded-full border-4 border-rose text-rose-bold text-[14px] tracking-[0.5em] font-black bg-white/80 backdrop-blur-3xl shadow-2xl uppercase">
+        <div className="inline-flex items-center gap-10 px-16 py-8 rounded-full border-4 border-rose text-rose-bold text-[14px] tracking-[0.5em] font-black bg-white shadow-2xl uppercase">
           <div className="relative flex h-4 w-4">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-bold opacity-75"></span>
             <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-bold"></span>
@@ -164,7 +164,7 @@ function Home() {
                 {s.name}
               </h3>
               
-              <p className="text-[#2c2f26] dark:text-[#f2f5e4] leading-relaxed text-xl md:text-2xl font-medium italic font-botanical relative z-10 px-6">
+              <p className="text-[#1a1c17] dark:text-[#f2f5e4] leading-relaxed text-xl md:text-2xl font-medium italic font-botanical relative z-10 px-6">
                 {s.description}
               </p>
             </div>
@@ -211,7 +211,7 @@ function Home() {
             <FlowerIcon src="/flower-wildflower.svg" className="w-14 h-14" />
             <MoonIcon className="w-14 h-14 rotate-180" />
           </div>
-          <div className="flex flex-col items-center gap-8 text-[#2c2f26] dark:text-[#d6dec2] uppercase tracking-[1em] text-[14px] font-black">
+          <div className="flex flex-col items-center gap-8 text-[#1a1c17] dark:text-[#f2f5e4] uppercase tracking-[1em] text-[14px] font-black">
             <span>Cultivated with Passion</span>
             <a href="https://cto.new" className="text-rose-bold hover:scale-110 transition-all duration-500 text-2xl">
               cto.new

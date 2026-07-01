@@ -43,6 +43,19 @@ def normalize_alpaca_bars(df, symbol):
     return result
 
 
+def _alpaca_timeframe(timeframe):
+    """Map a string timeframe (e.g. '15m', '1h', '1d') to an Alpaca TimeFrame."""
+    from alpaca.data.timeframe import TimeFrame
+    mapping = {
+        '1m': TimeFrame.Minute,
+        '5m': TimeFrame(5, TimeFrame.Minute.unit),
+        '15m': TimeFrame(15, TimeFrame.Minute.unit),
+        '1h': TimeFrame.Hour,
+        '1d': TimeFrame.Day,
+    }
+    return mapping.get(timeframe, TimeFrame(15, TimeFrame.Minute.unit))
+
+
 class CryptoDataFetcher:
     def __init__(self, exchange_id='binance', use_testnet=True):
         import ccxt
@@ -61,6 +74,29 @@ class CryptoDataFetcher:
         df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
         return df
 
+
+class AlpacaCryptoDataFetcher:
+    """Crypto OHLCV via Alpaca's CryptoHistoricalDataClient.
+
+    Uses Alpaca symbols like ``BTC/USD``. Crypto market data is public, so the
+    keys are optional, but they're passed through when configured.
+    """
+    def __init__(self, api_key=None, secret_key=None):
+        from alpaca.data.historical import CryptoHistoricalDataClient
+        self.client = CryptoHistoricalDataClient(api_key, secret_key)
+
+    def fetch_ohlcv(self, symbol, timeframe='15m', limit=100):
+        from alpaca.data.requests import CryptoBarsRequest
+        start = datetime.now() - timedelta(days=7)
+        request_params = CryptoBarsRequest(
+            symbol_or_symbols=symbol,
+            timeframe=_alpaca_timeframe(timeframe),
+            start=start
+        )
+        bars = self.client.get_crypto_bars(request_params)
+        return normalize_alpaca_bars(bars.df, symbol)
+
+
 class StockDataFetcher:
     def __init__(self, api_key=None, secret_key=None, paper=True):
         from alpaca.data.historical import StockHistoricalDataClient
@@ -72,29 +108,13 @@ class StockDataFetcher:
         Fetches historical bars for a stock asset using Alpaca.
         """
         from alpaca.data.requests import StockBarsRequest
-        from alpaca.data.timeframe import TimeFrame
-        # Map string timeframe to Alpaca TimeFrame
-        if timeframe == '1m':
-            alpaca_tf = TimeFrame.Minute
-        elif timeframe == '5m':
-            alpaca_tf = TimeFrame(5, TimeFrame.Minute.unit)
-        elif timeframe == '15m':
-            alpaca_tf = TimeFrame(15, TimeFrame.Minute.unit)
-        elif timeframe == '1h':
-            alpaca_tf = TimeFrame.Hour
-        elif timeframe == '1d':
-            alpaca_tf = TimeFrame.Day
-        else:
-            alpaca_tf = TimeFrame(15, TimeFrame.Minute.unit)
-        
-        # Calculate start time based on limit and timeframe
-        # This is a simplification; for a precise 'limit' bars, we'd need more complex logic
-        end = datetime.now()
-        start = end - timedelta(days=7) # Default to last 7 days for small limits
-        
+        # Default to the last 7 days of history for small limits. (For a precise
+        # bar count we'd compute start from limit * timeframe.)
+        start = datetime.now() - timedelta(days=7)
+
         request_params = StockBarsRequest(
             symbol_or_symbols=symbol,
-            timeframe=alpaca_tf,
+            timeframe=_alpaca_timeframe(timeframe),
             start=start
         )
         bars = self.client.get_stock_bars(request_params)
@@ -185,21 +205,8 @@ class DataPipeline:
 
     def _init_fetchers(self):
         exchanges = self.config.get('exchanges', {})
-        
-        # Crypto
-        binance_cfg = exchanges.get('binance', {})
-        if binance_cfg.get('api_key') and binance_cfg.get('api_secret'):
-            self.crypto = CryptoDataFetcher(
-                exchange_id='binance',
-                use_testnet=binance_cfg.get('testnet', True)
-            )
-            # CCXT usually handles keys via the exchange object, but the stub was simple.
-            # I'll update the CryptoDataFetcher to accept keys if needed, 
-            # but let's assume it picks them up from env as per common practice or passed here.
-            self.crypto.exchange.apiKey = binance_cfg.get('api_key')
-            self.crypto.exchange.secret = binance_cfg.get('api_secret')
 
-        # Stocks
+        # Stocks + (preferred) crypto via Alpaca — a single provider covers both.
         alpaca_cfg = exchanges.get('alpaca', {})
         if alpaca_cfg.get('api_key') and alpaca_cfg.get('api_secret'):
             self.stock = StockDataFetcher(
@@ -207,6 +214,20 @@ class DataPipeline:
                 secret_key=alpaca_cfg.get('api_secret'),
                 paper=alpaca_cfg.get('paper', True)
             )
+            self.crypto = AlpacaCryptoDataFetcher(
+                api_key=alpaca_cfg.get('api_key'),
+                secret_key=alpaca_cfg.get('api_secret')
+            )
+
+        # Crypto fallback: Binance/ccxt, only if Alpaca didn't already claim it.
+        binance_cfg = exchanges.get('binance', {})
+        if self.crypto is None and binance_cfg.get('api_key') and binance_cfg.get('api_secret'):
+            self.crypto = CryptoDataFetcher(
+                exchange_id='binance',
+                use_testnet=binance_cfg.get('testnet', True)
+            )
+            self.crypto.exchange.apiKey = binance_cfg.get('api_key')
+            self.crypto.exchange.secret = binance_cfg.get('api_secret')
 
         # Forex
         oanda_cfg = exchanges.get('oanda', {})

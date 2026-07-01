@@ -1,0 +1,23 @@
+exchanges:
+  binance:
+    api_key: "${BINANCE_API_KEY}"
+    api_secret: "${BINANCE_API_SECRET}"
+    testnet: true
+  alpaca:
+    api_key: "${ALPACA_API_KEY}"
+    api_secret: "${ALPACA_API_SECRET}"
+    paper: true
+
+trading:
+  default_risk_reward: 3.0
+  max_drawdown: 0.1
+  assets:
+    - BTC/USDT
+    - ETH/USDT
+    - TSLA
+    - EUR/USD
+
+strategies:
+  momentum_scalp:
+    timeframe: "15m"
+    conviction_threshold: "Medium"

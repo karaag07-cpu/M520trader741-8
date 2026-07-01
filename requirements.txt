@@ -1,0 +1,7 @@
+ccxt
+alpaca-py
+oandapyV20
+pandas
+numpy
+pyyaml
+python-dotenv

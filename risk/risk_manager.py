@@ -45,9 +45,63 @@ class RiskManager:
             'tp_levels': tp_levels
         }
 
-    def validate_risk(self, account_balance, risk_per_trade=0.01):
+    def validate_risk(self, account_balance, entry_price, stop_loss,
+                      risk_per_trade=0.01, max_position_fraction=0.25,
+                      size_modifier=1.0):
         """
-        Determines position size based on account risk.
+        Determines position size using fixed-fractional risk.
+
+        The dollar amount risked on the trade is
+        ``account_balance * risk_per_trade * size_modifier``. Dividing this by
+        the per-unit risk (the distance between entry and stop-loss) yields the
+        quantity such that being stopped out loses at most the risk budget.
+        The resulting notional is then capped at ``max_position_fraction`` of
+        the account so a single tight-stop trade can't dominate the book.
+
+        ``size_modifier`` is designed to accept the ``position_size_modifier``
+        emitted by the macro-regime strategy (e.g. 0.0 to stand aside, 0.5 to
+        halve exposure in a risk-off regime).
+
+        Args:
+            account_balance: Total account equity.
+            entry_price: Intended entry price (must be > 0).
+            stop_loss: Stop-loss price; its distance from entry sets the risk.
+            risk_per_trade: Fraction of equity to risk (0 < x < 1).
+            max_position_fraction: Cap on notional as a fraction of equity.
+            size_modifier: Multiplier applied to the risk budget (>= 0).
+
+        Returns:
+            A dict with ``quantity``, ``notional``, ``risk_amount`` and
+            ``stop_distance``, or ``None`` when the inputs can't produce a
+            valid position.
         """
-        # Implementation for position sizing
-        pass
+        if account_balance <= 0 or entry_price <= 0:
+            return None
+        if not 0 < risk_per_trade < 1:
+            return None
+        if not 0 < max_position_fraction <= 1:
+            return None
+        if size_modifier <= 0:
+            return None
+
+        stop_distance = abs(entry_price - stop_loss)
+        if stop_distance <= 0:
+            return None
+
+        risk_amount = account_balance * risk_per_trade * size_modifier
+        quantity = risk_amount / stop_distance
+
+        # Never let a tight stop size us past the notional cap.
+        max_notional = account_balance * max_position_fraction
+        if quantity * entry_price > max_notional:
+            quantity = max_notional / entry_price
+
+        if quantity <= 0:
+            return None
+
+        return {
+            'quantity': quantity,
+            'notional': quantity * entry_price,
+            'risk_amount': min(risk_amount, quantity * stop_distance),
+            'stop_distance': stop_distance
+        }

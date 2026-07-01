@@ -2,6 +2,20 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 
+
+def default_log_path(filename):
+    """Resolve a log file path without hardcoding machine-specific directories.
+
+    Uses ``$MINUTETRADER_LOG_DIR`` when set, otherwise a ``logs/`` directory at
+    the project root (the parent of this module's package), so the bot writes
+    logs correctly on any host or CI runner.
+    """
+    log_dir = os.environ.get('MINUTETRADER_LOG_DIR') or os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'logs'
+    )
+    return os.path.join(log_dir, filename)
+
+
 def setup_logger(name, log_file, level=logging.INFO):
     """Function to setup as many loggers as you want"""
     

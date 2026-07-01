@@ -4,10 +4,10 @@ from backtest.engine import BacktestEngine
 from signals.momentum_strategy import MomentumStrategy
 from signals.macro_regime import MacroRegimeStrategy
 from utils.mock_data import generate_mock_ohlcv
-from utils.logger import setup_logger
+from utils.logger import setup_logger, default_log_path
 
 def run_ensemble_backtest():
-    logger = setup_logger('Backtest', '/home/team/shared/trading_bot/logs/backtest.log')
+    logger = setup_logger('Backtest', default_log_path('backtest.log'))
     logger.info("Starting Ensemble Backtest...")
 
     # 1. Generate Mock Data for multiple assets

@@ -1,15 +1,15 @@
-import ccxt
 import pandas as pd
-from alpaca.data.historical import StockHistoricalDataClient
-from alpaca.data.requests import StockBarsRequest
-from alpaca.data.timeframe import TimeFrame
-from oandapyV20 import API
-import oandapyV20.endpoints.instruments as instruments
 import requests
 from datetime import datetime, timedelta
 
+# Broker SDKs (ccxt, alpaca-py, oandapyV20) are imported lazily inside the
+# fetchers that use them, so importing this module — e.g. for the FRED macro
+# fetcher or a single asset class — doesn't require every broker SDK installed.
+
+
 class CryptoDataFetcher:
     def __init__(self, exchange_id='binance', use_testnet=True):
+        import ccxt
         self.exchange = getattr(ccxt, exchange_id)({
             'enableRateLimit': True,
         })
@@ -27,6 +27,7 @@ class CryptoDataFetcher:
 
 class StockDataFetcher:
     def __init__(self, api_key=None, secret_key=None, paper=True):
+        from alpaca.data.historical import StockHistoricalDataClient
         self.client = StockHistoricalDataClient(api_key, secret_key)
         self.paper = paper
 
@@ -34,6 +35,8 @@ class StockDataFetcher:
         """
         Fetches historical bars for a stock asset using Alpaca.
         """
+        from alpaca.data.requests import StockBarsRequest
+        from alpaca.data.timeframe import TimeFrame
         # Map string timeframe to Alpaca TimeFrame
         if timeframe == '1m':
             alpaca_tf = TimeFrame.Minute
@@ -64,6 +67,7 @@ class StockDataFetcher:
 
 class ForexDataFetcher:
     def __init__(self, access_token=None, account_id=None, environment='practice'):
+        from oandapyV20 import API
         self.client = API(access_token=access_token, environment=environment)
         self.account_id = account_id
 
@@ -71,6 +75,7 @@ class ForexDataFetcher:
         """
         Fetches historical candles for a forex instrument using OANDA.
         """
+        import oandapyV20.endpoints.instruments as instruments
         params = {
             "count": count,
             "granularity": timeframe
@@ -99,20 +104,38 @@ class MacroDataFetcher:
 
     def fetch_series(self, series_id):
         """
-        Fetches economic data from FRED.
+        Fetches the latest value of an economic series from FRED.
+        """
+        history = self.fetch_series_history(series_id, limit=1)
+        return history[-1] if history else None
+
+    def fetch_series_history(self, series_id, limit=13):
+        """
+        Fetches the most recent ``limit`` observations of a FRED series as a
+        chronological (oldest -> newest) list of floats.
+
+        A history (rather than a single point) is needed to derive
+        year-over-year inflation and rate trends. Non-numeric observations
+        (FRED uses '.' for missing values) are skipped.
         """
         params = {
             'series_id': series_id,
             'api_key': self.api_key,
             'file_type': 'json',
-            'sort_order': 'desc',
-            'limit': 1
+            'sort_order': 'desc',   # newest first, so we can cap with limit
+            'limit': limit
         }
         response = requests.get(self.base_url, params=params)
         data = response.json()
-        if 'observations' in data and data['observations']:
-            return float(data['observations'][0]['value'])
-        return None
+        observations = data.get('observations', []) if isinstance(data, dict) else []
+        values = []
+        for obs in observations:
+            try:
+                values.append(float(obs['value']))
+            except (KeyError, TypeError, ValueError):
+                continue  # skip missing/non-numeric points
+        values.reverse()  # oldest -> newest
+        return values
 
 class DataPipeline:
     def __init__(self, config):
@@ -205,3 +228,20 @@ class DataPipeline:
                     print(f"Error fetching macro {series_id}: {e}")
 
         return results
+
+    def fetch_macro_history(self, series_ids, limit=13):
+        """Fetch recent history for macro series as {series_id: [floats]}.
+
+        Used to derive regime features (YoY inflation, rate trends). Returns an
+        empty dict when no macro fetcher is configured (e.g. running on mock
+        data) so callers can fall back to neutral defaults.
+        """
+        history = {}
+        if not self.macro:
+            return history
+        for series_id in series_ids:
+            try:
+                history[series_id] = self.macro.fetch_series_history(series_id, limit=limit)
+            except Exception as e:
+                print(f"Error fetching macro history {series_id}: {e}")
+        return history

@@ -14,6 +14,7 @@ from risk.risk_manager import RiskManager
 from execution.paper_trader import PaperTrader
 from data.fetchers import DataPipeline
 from data.processors import calculate_atr
+from data.macro_features import derive_macro_params
 
 def main():
     # 1. Setup
@@ -64,23 +65,18 @@ def main():
             
             # 2. Data Fetching
             data_results = pipeline.fetch_all(symbols_to_fetch)
-            
-            # Extract Macro Data for global filtering
-            macro_context = data_results.get('macro', {})
-            # Simplified: just using current values
-            
+
+            # Derive macro-regime features from recent FRED history (YoY
+            # inflation, rate/unemployment trends) rather than raw index levels.
+            macro_history = pipeline.fetch_macro_history(symbols_to_fetch.get('macro', []))
+            macro_params = derive_macro_params(macro_history)
+
             # 3. Global Macro Filter
             macro_signal = None
             pos_size_modifier = 1.0
             for strategy in strategies:
                 if isinstance(strategy, MacroRegimeStrategy):
-                    # Map FRED series to logic parameters
-                    params = {
-                        'yc_spread': macro_context.get('T10Y2Y', 1.0),
-                        'inflation_yoy': macro_context.get('CPIAUCSL', 2.0),
-                        'fed_rate_trend': "Stable" # For now, can be calculated from history
-                    }
-                    macro_signal = strategy.generate_signal(None, **params)
+                    macro_signal = strategy.generate_signal(None, **macro_params)
                     if macro_signal:
                         pos_size_modifier = macro_signal.metadata.get('position_size_modifier', 1.0)
                         logger.info(f"Macro Regime: {macro_signal.metadata['regime']} (Bias: {macro_signal.metadata['global_bias']}, Modifier: {pos_size_modifier})")

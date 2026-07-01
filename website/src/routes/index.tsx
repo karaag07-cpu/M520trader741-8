@@ -149,16 +149,9 @@ function Home() {
           {strategies.map((s, i) => (
             <div 
               key={i} 
-              className={`organic-card w-full max-w-md md:max-w-none md:absolute group hover:-translate-y-8 transition-all duration-1000 ${s.shape} ${s.offset} ${s.borderColor}`}
+              className={`organic-card w-full max-w-md md:max-w-none md:absolute group hover:-translate-y-8 transition-all duration-1000 ${s.shape} ${s.offset} ${s.borderColor} strategy-card-${i}`}
               style={{ 
-                zIndex: 10 + i,
-                // Inlined media query equivalent for desktop absolute positioning
-                ...(typeof window !== 'undefined' && window.innerWidth >= 768 ? {
-                  top: s.desktopStyle.top,
-                  left: s.desktopStyle.left,
-                  width: 'min(520px, 35vw)',
-                  position: 'absolute'
-                } : {})
+                zIndex: 10 + i
               }}
             >
               {/* CSS Injection for Desktop positioning to avoid hydration issues */}
@@ -173,7 +166,7 @@ function Home() {
                 }
               `}} />
               
-              <div className={`w-full flex flex-col items-center justify-center strategy-card-${i}`}>
+              <div className="w-full flex flex-col items-center justify-center">
                 {/* Floral Corner Accent */}
                 <FlowerIcon src={s.flower} className="flower-accent -top-12 -right-12 md:-top-16 md:-right-16 w-32 h-32 md:w-40 md:h-40 opacity-100" />
                 

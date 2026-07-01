@@ -12,6 +12,7 @@ from signals.combiner import SignalCombiner
 from signals.base_strategy import SignalType
 from risk.risk_manager import RiskManager
 from execution.paper_trader import PaperTrader
+from execution.status_reporter import build_status, write_status
 from data.fetchers import DataPipeline
 from data.processors import calculate_atr
 from data.macro_features import derive_macro_params
@@ -190,7 +191,15 @@ def main():
             # cycle (collected above from the fetched data / fallback series),
             # so stop-loss and take-profit trigger on real market moves.
             paper_trader.update_positions(current_market_prices)
-            
+
+            # 11. Publish a status snapshot for the website dashboard to read.
+            try:
+                regime_meta = macro_signal.metadata if macro_signal else {}
+                status = build_status(paper_trader, current_market_prices, regime=regime_meta)
+                write_status(status)
+            except Exception as e:
+                logger.error(f"Failed to write status snapshot: {e}")
+
             logger.info(f"Current Balance: {paper_trader.balance:.2f}")
             time.sleep(60) # Wait 60s for next cycle
             

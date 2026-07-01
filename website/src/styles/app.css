@@ -1,0 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&display=swap');
+@import "tailwindcss";
+
+@layer base {
+  html,
+  body {
+    @apply bg-orange-50 text-stone-900 antialiased dark:bg-stone-950 dark:text-stone-100;
+    font-family: 'Quicksand', sans-serif;
+  }
+}
+
+.cute-card {
+  @apply transition-transform duration-300 hover:scale-105;
+}

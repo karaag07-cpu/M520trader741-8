@@ -18,34 +18,13 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
-function BotanicalArt({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 200 200" className={className} xmlns="http://www.w3.org/2000/svg">
-      <path 
-        d="M100,180 Q80,120 100,40 Q120,120 100,180" 
-        fill="none" 
-        stroke="currentColor" 
-        strokeWidth="1" 
-        opacity="0.6"
-      />
-      <path 
-        d="M100,140 Q60,110 40,80 Q90,90 100,140" 
-        fill="currentColor" 
-        opacity="0.2"
-      />
-      <path 
-        d="M100,120 Q140,90 160,60 Q110,70 100,120" 
-        fill="currentColor" 
-        opacity="0.2"
-      />
-      <circle cx="100" cy="40" r="3" fill="currentColor" opacity="0.4" />
-    </svg>
-  );
+function FlowerIcon({ src, className }: { src: string; className?: string }) {
+  return <img src={src} className={className} alt="Flower accent" />;
 }
 
 function MoonIcon({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.5">
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
     </svg>
   );
@@ -57,46 +36,51 @@ function Home() {
   const strategies = [
     {
       name: "Momentum Protocol",
-      description: "Observing the natural ebb and flow of market energy with quiet precision.",
+      description: "Harnessing the vital energy of market cycles with vivid precision.",
       id: "α",
-      color: "text-[#e8a5a5]",
-      image: "/botanical-0.svg",
+      color: "text-rose-bold",
+      borderColor: "border-rose",
+      flower: "/flower-rose.svg",
       shape: "organic-shape-1",
       offset: "md:translate-y-12"
     },
     {
       name: "Relative Strength",
-      description: "Identifying the resilient blooms that thrive amidst shifting market seasons.",
+      description: "Spotting the most vibrant blooms in the digital market landscape.",
       id: "β",
-      color: "text-[#a8b08e]",
-      image: "/botanical-1.svg",
+      color: "text-sage-bold",
+      borderColor: "border-sage",
+      flower: "/flower-sage.svg",
       shape: "organic-shape-2",
       offset: "md:-translate-y-8"
     },
     {
       name: "Cross-Asset Intelligence",
-      description: "Understanding the interconnected roots that bind global digital assets.",
+      description: "Mapping the deep roots that connect every asset in our ecosystem.",
       id: "γ",
-      color: "text-[#d6b5ff]",
-      image: "/botanical-2.svg",
+      color: "text-lavender-bold",
+      borderColor: "border-lavender",
+      flower: "/flower-lavender.svg",
       shape: "organic-shape-1",
       offset: "md:translate-y-24"
     },
     {
       name: "Sentiment & Flow",
-      description: "Tuning into the collective whisper of the crowd to find hidden paths.",
+      description: "Feeling the breeze of public opinion to navigate hidden currents.",
       id: "δ",
-      color: "text-[#f5d0d0]",
-      image: "/botanical-0.svg",
+      color: "text-rose-bold",
+      borderColor: "border-blush",
+      flower: "/flower-wildflower.svg",
       shape: "organic-shape-2",
       offset: "md:translate-x-12"
     },
     {
       name: "Macro Regime Analysis",
-      description: "Aligning our movement with the grand cycles of the financial environment.",
+      description: "Aligning with the grand seasonal shifts of the global economy.",
       id: "ε",
-      color: "text-[#b8a5b8]",
-      image: "/botanical-1.svg",
+      color: "text-lavender-bold",
+      borderColor: "border-lavender",
+      flower: "/flower-rose.svg",
       shape: "organic-shape-1",
       offset: "md:-translate-x-8 md:translate-y-12"
     }
@@ -104,114 +88,132 @@ function Home() {
 
   return (
     <main className="relative min-h-dvh overflow-hidden bg-[#faf7f2] dark:bg-[#1a1c17] selection-botanical pb-32">
-      <div className="botanical-pattern absolute inset-0 pointer-events-none opacity-30" />
+      <div className="botanical-pattern absolute inset-0 pointer-events-none opacity-40" />
       
-      {/* Background Flowing Art */}
-      <img src="/botanical-2.svg" className="absolute top-0 right-0 w-[60%] opacity-10 pointer-events-none" />
-      <img src="/botanical-1.svg" className="absolute bottom-0 left-0 w-[50%] opacity-10 pointer-events-none rotate-180" />
+      {/* Background Floral Art - Bolder */}
+      <FlowerIcon src="/flower-rose.svg" className="absolute -top-20 -right-20 w-[40%] opacity-20 pointer-events-none rotate-12" />
+      <FlowerIcon src="/flower-sage.svg" className="absolute -bottom-20 -left-20 w-[40%] opacity-20 pointer-events-none -rotate-12" />
+      <FlowerIcon src="/flower-lavender.svg" className="absolute top-[40%] left-[-10%] w-[30%] opacity-15 pointer-events-none" />
 
-      {/* Layered Soft Glows */}
-      <div className="absolute top-[-10%] -left-[10%] w-[40%] h-[40%] bg-[#f5d0d0] soft-glow rounded-full pointer-events-none animate-drift" />
+      {/* Saturated Soft Glows */}
+      <div className="absolute top-[-10%] -left-[10%] w-[40%] h-[40%] bg-[#e8a5a5] soft-glow rounded-full pointer-events-none animate-drift" />
       <div className="absolute bottom-[-5%] -right-[10%] w-[50%] h-[50%] bg-[#d6b5ff] soft-glow rounded-full pointer-events-none animate-drift" style={{ animationDelay: '-5s' }} />
       <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] bg-[#a8b08e] soft-glow rounded-full pointer-events-none animate-drift" style={{ animationDelay: '-10s' }} />
 
       {/* Header Section */}
-      <section className="relative flex flex-col items-center pt-32 pb-32 px-6 text-center z-10">
-        <div className="mb-20 flex items-center gap-6 text-[#a8b08e]">
-           <MoonIcon className="w-6 h-6 opacity-40 -rotate-12" />
-           <div className="h-[1px] w-16 bg-current opacity-20" />
-           <span className="text-[9px] tracking-[0.8em] uppercase font-bold text-[#636b51]">
+      <header className="relative z-20 pt-12 px-6 flex justify-center">
+        <div className="flex items-center gap-4 text-sage-bold">
+          <FlowerIcon src="/flower-rose.svg" className="w-8 h-8" />
+          <span className="text-xs tracking-[0.6em] font-bold uppercase">Floral Analytics</span>
+          <FlowerIcon src="/flower-lavender.svg" className="w-8 h-8" />
+        </div>
+      </header>
+
+      <section className="relative flex flex-col items-center pt-24 pb-32 px-6 text-center z-10">
+        <div className="mb-16 flex items-center gap-6 text-rose-bold">
+           <MoonIcon className="w-8 h-8 -rotate-12" />
+           <div className="h-[2px] w-24 bg-current opacity-40" />
+           <span className="text-[11px] tracking-[1em] uppercase font-bold">
              The Botanical Observatory
            </span>
-           <div className="h-[1px] w-16 bg-current opacity-20" />
-           <MoonIcon className="w-6 h-6 opacity-40 rotate-12" />
+           <div className="h-[2px] w-24 bg-current opacity-40" />
+           <MoonIcon className="w-8 h-8 rotate-12" />
         </div>
         
-        <h1 className="max-w-5xl text-6xl md:text-9xl font-light tracking-[0.1em] text-[#3d4234] dark:text-[#f2f0e4] mb-12">
+        <h1 className="max-w-5xl text-7xl md:text-9xl font-light tracking-[0.05em] text-[#3d4234] dark:text-[#f2f0e4] mb-12">
           {businessName || "MinuteTrader"}
         </h1>
         
-        <p className="max-w-3xl text-2xl md:text-3xl font-botanical italic text-[#636b51] dark:text-[#a8b08e] leading-relaxed mb-20 px-4">
-          Watching the digital garden <br className="hidden md:block" /> 
-          where precision meets organic growth.
+        <p className="max-w-3xl text-3xl md:text-4xl font-botanical italic text-sage-bold leading-relaxed mb-20 px-4">
+          Nurturing digital assets <br className="hidden md:block" /> 
+          with the precision of a master gardener.
         </p>
 
-        <div className="inline-flex items-center gap-8 px-12 py-5 rounded-full border border-[#d6cec2] text-[#636b51] dark:text-[#e4e9d6] text-[10px] tracking-[0.4em] font-bold bg-white/30 backdrop-blur-2xl shadow-sm uppercase">
-          <div className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#e8a5a5] opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#e8a5a5]"></span>
+        <div className="inline-flex items-center gap-8 px-14 py-6 rounded-full border-2 border-rose text-rose-bold text-[12px] tracking-[0.5em] font-bold bg-white/60 backdrop-blur-3xl shadow-xl uppercase">
+          <div className="relative flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-bold opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-bold"></span>
           </div>
-          Nurturing Algorithms
+          Vibrant Growth Active
         </div>
       </section>
 
-      {/* Anti-Grid Strategy Layout */}
+      {/* Anti-Grid Strategy Layout with Bold Flowers */}
       <section className="max-w-[1400px] mx-auto px-6 py-20 relative z-10">
-        <div className="relative min-h-[800px] md:min-h-[1200px]">
+        <div className="relative min-h-[1000px] md:min-h-[1400px]">
           {strategies.map((s, i) => (
             <div 
               key={i} 
-              className={`organic-card absolute group hover:-translate-y-4 transition-all duration-1000 ${s.shape} ${s.offset}`}
+              className={`organic-card absolute group hover:-translate-y-6 transition-all duration-1000 ${s.shape} ${s.offset} ${s.borderColor}`}
               style={{ 
-                width: 'clamp(300px, 30vw, 450px)',
-                top: `${(i % 3) * 30}%`,
-                left: i < 3 ? `${i * 30}%` : `${(i - 3) * 40 + 15}%`,
+                width: 'clamp(320px, 35vw, 480px)',
+                top: `${(i % 3) * 35}%`,
+                left: i < 3 ? `${i * 32}%` : `${(i - 3) * 45 + 10}%`,
                 zIndex: 10 + i
               }}
             >
-              <img src={s.image} className="absolute inset-0 w-full h-full object-cover opacity-5 pointer-events-none scale-150" />
+              {/* Floral Corner Accent */}
+              <FlowerIcon src={s.flower} className="flower-accent -top-12 -right-12 w-32 h-32" />
               
               <div className="flex justify-between items-start mb-12 relative z-10">
-                <span className={`font-botanical italic text-4xl ${s.color} opacity-80`}>{s.id}</span>
-                <MoonIcon className={`w-5 h-5 ${s.color} opacity-30 group-hover:opacity-100 transition-opacity duration-1000`} />
+                <span className={`font-botanical italic text-5xl ${s.color}`}>{s.id}</span>
+                <MoonIcon className={`w-6 h-6 ${s.color} opacity-60 group-hover:opacity-100 transition-opacity duration-700`} />
               </div>
               
-              <h3 className="text-3xl font-light text-[#3d4234] dark:text-[#f2f0e4] mb-8 tracking-widest relative z-10">
+              <h3 className="text-4xl font-light text-[#3d4234] dark:text-[#f2f0e4] mb-8 tracking-widest relative z-10">
                 {s.name}
               </h3>
               
-              <p className="text-[#636b51] dark:text-[#a8b08e] leading-relaxed text-lg font-light italic font-botanical relative z-10">
+              <p className="text-[#636b51] dark:text-[#a8b08e] leading-relaxed text-xl font-light italic font-botanical relative z-10">
                 {s.description}
               </p>
             </div>
           ))}
           
-          {/* Central Decorative Arches */}
-          <div className="hidden lg:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] border border-[#a8b08e]/10 rounded-full pointer-events-none" />
-          <div className="hidden lg:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-[#a8b08e]/5 rounded-full pointer-events-none" />
+          {/* Central Decorative Elements */}
+          <div className="hidden lg:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border-4 border-sage-soft rounded-full pointer-events-none" />
+          <div className="hidden lg:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] border-2 border-rose-soft rounded-full pointer-events-none" />
+          <FlowerIcon src="/flower-wildflower.svg" className="hidden lg:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 opacity-20" />
         </div>
       </section>
 
-      {/* Atmosphere Section */}
-      <section className="mt-60 px-6 relative z-10">
-        <div className="max-w-6xl mx-auto rounded-[5rem] bg-[#3d4234] dark:bg-[#11130e] text-[#faf7f2] p-24 md:p-40 text-center shadow-[0_50px_100px_-20px_rgba(0,0,0,0.4)] overflow-hidden relative">
-          <div className="absolute inset-0 botanical-pattern opacity-10" />
-          <img src="/botanical-2.svg" className="absolute top-0 right-0 w-96 h-96 opacity-10 -translate-y-1/2 translate-x-1/2" />
+      {/* Vibrant Atmosphere Section */}
+      <section className="mt-80 px-6 relative z-10">
+        <div className="max-w-6xl mx-auto rounded-[6rem] bg-rose-bold text-[#faf7f2] p-24 md:p-40 text-center shadow-[0_60px_120px_-30px_rgba(214,133,133,0.5)] overflow-hidden relative">
+          <div className="absolute inset-0 botanical-pattern opacity-20" />
+          <FlowerIcon src="/flower-rose.svg" className="absolute top-0 right-0 w-[50%] h-[50%] opacity-20 -translate-y-1/3 translate-x-1/3 rotate-45" />
+          <FlowerIcon src="/flower-lavender.svg" className="absolute bottom-0 left-0 w-[40%] h-[40%] opacity-20 translate-y-1/4 -translate-x-1/4 -rotate-12" />
           
           <div className="relative z-10">
-            <h2 className="text-4xl md:text-6xl font-light mb-16 tracking-[0.3em] uppercase">The Art of Wait</h2>
-            <div className="w-32 h-[1px] bg-[#a8b08e]/40 mx-auto mb-16" />
-            <p className="text-[#a8b08e] text-2xl font-light leading-relaxed max-w-4xl mx-auto font-botanical italic">
-              "We do not chase the market; we wait for it to reveal its patterns, like a bloom opening to the morning sun. Our architecture is complete, yet we grant it the grace of refinement through rigorous validation."
+            <h2 className="text-5xl md:text-8xl font-light mb-16 tracking-[0.2em] uppercase">Vibrant Precision</h2>
+            <div className="w-48 h-[2px] bg-white opacity-40 mx-auto mb-16" />
+            <p className="text-white text-3xl font-light leading-relaxed max-w-4xl mx-auto font-botanical italic">
+              "We embrace the bold vitality of the markets. Our algorithms don't just survive; they bloom. Every trade is a carefully cultivated moment of growth in our digital garden."
             </p>
-            <div className="mt-24 inline-block px-14 py-6 rounded-full border border-[#a8b08e]/30 text-[#a8b08e] uppercase tracking-[0.5em] text-[10px] font-bold hover:bg-white/5 transition-all duration-700 cursor-default backdrop-blur-md">
-              Restricted Archive Access
+            <div className="mt-24 inline-block px-16 py-8 rounded-full border-2 border-white/40 text-white uppercase tracking-[0.6em] text-[12px] font-bold hover:bg-white/10 transition-all duration-700 cursor-default backdrop-blur-md">
+              Secure Garden Portal
             </div>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="pt-60 pb-20 px-6 text-center">
-        <div className="flex flex-col items-center gap-12">
-          <div className="flex gap-12 text-[#a8b08e] opacity-40">
-            <BotanicalArt className="w-8 h-8" />
-            <MoonIcon className="w-8 h-8" />
-            <BotanicalArt className="w-8 h-8 rotate-180" />
+      {/* Footer with Floral Header */}
+      <footer className="pt-80 pb-20 px-6 text-center relative">
+        <div className="absolute top-40 left-1/2 -translate-x-1/2 w-full flex justify-center gap-12 opacity-40">
+           <FlowerIcon src="/flower-rose.svg" className="w-24 h-24" />
+           <FlowerIcon src="/flower-lavender.svg" className="w-24 h-24" />
+           <FlowerIcon src="/flower-sage.svg" className="w-24 h-24" />
+        </div>
+        
+        <div className="flex flex-col items-center gap-12 relative z-10">
+          <div className="flex gap-16 text-rose-bold">
+            <MoonIcon className="w-10 h-10" />
+            <FlowerIcon src="/flower-wildflower.svg" className="w-10 h-10" />
+            <MoonIcon className="w-10 h-10 rotate-180" />
           </div>
-          <div className="flex flex-col items-center gap-4 text-[#a8b08e] uppercase tracking-[0.8em] text-[10px] font-bold">
-            <span>Curated with Serenity</span>
-            <a href="https://cto.new" className="text-[#3d4234] dark:text-[#f2f0e4] hover:text-[#e8a5a5] transition-all duration-500">
+          <div className="flex flex-col items-center gap-6 text-sage-bold uppercase tracking-[1em] text-[12px] font-bold">
+            <span>Cultivated with Passion</span>
+            <a href="https://cto.new" className="text-rose-bold hover:text-rose-bold/80 transition-all duration-500 scale-125">
               cto.new
             </a>
           </div>

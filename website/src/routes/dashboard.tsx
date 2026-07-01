@@ -1,6 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { readFile } from "node:fs/promises";
+import { useEffect } from "react";
+
+// How often the dashboard re-fetches the bot's status snapshot (ms).
+const REFRESH_MS = 15000;
 
 type Position = {
   symbol: string;
@@ -56,6 +60,16 @@ function MetricCard({ label, value, accent }: { label: string; value: string; ac
 
 function Dashboard() {
   const status = Route.useLoaderData();
+  const router = useRouter();
+
+  // Poll: re-run the loader on an interval so the dashboard reflects the bot's
+  // latest published snapshot without a manual refresh.
+  useEffect(() => {
+    const id = setInterval(() => {
+      router.invalidate();
+    }, REFRESH_MS);
+    return () => clearInterval(id);
+  }, [router]);
 
   return (
     <main className="relative min-h-dvh overflow-x-hidden bg-[#faf7f2] dark:bg-[#0d0e0a] selection-botanical pb-32">
@@ -89,7 +103,7 @@ function Dashboard() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-bold opacity-75" />
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-bold" />
               </span>
-              Updated {new Date(status.updated_at).toLocaleString()}
+              Updated {new Date(status.updated_at).toLocaleString()} · auto-refresh {REFRESH_MS / 1000}s
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 text-left">

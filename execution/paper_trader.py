@@ -6,13 +6,32 @@ class PaperTrader:
         self.positions = {}
         self.trade_history = []
 
+    def committed_capital(self, exclude_symbol=None):
+        """Total notional (at entry price) currently tied up in open positions.
+
+        ``exclude_symbol`` omits one symbol from the total, used when placing a
+        new order for a symbol whose existing position would be replaced.
+        """
+        return sum(
+            pos['amount'] * pos['entry_price']
+            for sym, pos in self.positions.items()
+            if sym != exclude_symbol
+        )
+
+    def available_buying_power(self, exclude_symbol=None):
+        """Cash not already committed to open positions."""
+        return self.balance - self.committed_capital(exclude_symbol=exclude_symbol)
+
     def place_order(self, symbol, side, amount, price, stop_loss=None, take_profit=None):
         """
         Simulates placing an order and returns a trade record.
         """
-        # Check if we have enough balance
+        # Reject if the order would commit more capital than is still free,
+        # accounting for notional already tied up in other open positions. An
+        # existing position on this symbol would be replaced, so its committed
+        # capital is excluded from the available total.
         total_cost = amount * price
-        if total_cost > self.balance:
+        if total_cost > self.available_buying_power(exclude_symbol=symbol):
             log_trade_attempt(symbol, side, amount, price, "REJECTED", "Insufficient funds")
             return None
 

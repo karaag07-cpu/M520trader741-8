@@ -1,7 +1,7 @@
 import time
 import os
 from config.config_loader import load_config
-from utils.logger import setup_logger
+from utils.logger import setup_logger, default_log_path
 from utils.mock_data import generate_mock_ohlcv
 from signals.momentum_strategy import MomentumStrategy
 from signals.relative_strength import RelativeStrengthStrategy
@@ -17,7 +17,7 @@ from data.processors import calculate_atr
 
 def main():
     # 1. Setup
-    logger = setup_logger('MinuteTrader', '/home/team/shared/trading_bot/logs/bot.log')
+    logger = setup_logger('MinuteTrader', default_log_path('bot.log'))
     logger.info("Starting MinuteTrader Bot with full Strategy Ensemble...")
     
     config = load_config()

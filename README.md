@@ -20,7 +20,7 @@ The project is currently in the **Paper Trading / Backtesting** phase. No real c
 5. **Macro Regime Detection**: Rules-based filter of yield curve and inflation to set overall market bias.
 
 ## Symbol Coverage
-For a full list of monitored symbols, spreads, and liquidity analysis, see [symbol_validation.md](../symbol_validation.md).
+The set of monitored symbols is configured under `trading.assets` in [config/settings.yaml](config/settings.yaml).
 
 ## Getting Started
 

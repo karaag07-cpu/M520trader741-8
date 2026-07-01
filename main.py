@@ -16,11 +16,17 @@ from data.fetchers import DataPipeline
 
 def main():
     # 1. Setup
-    logger = setup_logger('MinuteTrader', '/home/team/shared/trading_bot/logs/bot.log')
+    log_file = os.environ.get(
+        'MINUTETRADER_LOG_FILE',
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs', 'bot.log')
+    )
+    logger = setup_logger('MinuteTrader', log_file)
     logger.info("Starting MinuteTrader Bot with full Strategy Ensemble...")
     
     config = load_config()
-    risk_manager = RiskManager(risk_reward_ratio=config.get('trading', {}).get('default_risk_reward', 3.0))
+    trading_cfg = config.get('trading', {})
+    risk_manager = RiskManager(risk_reward_ratio=trading_cfg.get('default_risk_reward', 3.0))
+    risk_per_trade = trading_cfg.get('risk_per_trade', 0.01)
     paper_trader = PaperTrader(initial_balance=10000)
     
     # Initialize Data Pipeline
@@ -49,15 +55,29 @@ def main():
     }
     
     KILLSWITCH_PATH = 'killswitch.lock'
-    
+    killswitch_engaged = False
+
     try:
         while True: # Run continuously
             # 0. Kill Switch Check
             if os.path.exists(KILLSWITCH_PATH):
-                logger.warning("Kill Switch activated! Stopping bot and skipping cycles.")
-                # Optional: Close all positions if real
+                if not killswitch_engaged:
+                    logger.warning("Kill Switch activated! Flattening all open positions and halting trading.")
+                    if paper_trader.positions:
+                        # Mark-to-market close of every open position so nothing
+                        # is left unmanaged while trading is halted.
+                        flatten_prices = {
+                            s: generate_mock_ohlcv(s, length=1)['close'].iloc[0]
+                            for s in list(paper_trader.positions.keys())
+                        }
+                        closed = paper_trader.close_all_positions(flatten_prices)
+                        logger.warning(f"Kill Switch: closed {closed} open position(s). Balance: {paper_trader.balance:.2f}")
+                    killswitch_engaged = True
                 time.sleep(10)
                 continue
+            else:
+                # Kill switch cleared: resume normal trading.
+                killswitch_engaged = False
 
             logger.info("--- New Market Cycle ---")
             
@@ -148,12 +168,21 @@ def main():
                         # 8. Execution
                         entry_price = (levels['entry_zone'][0] + levels['entry_zone'][1]) / 2
                         
-                        # Position sizing with modifier
-                        base_amount = 0.1 # Simplified
+                        # Risk-based position sizing, scaled by the macro modifier
+                        base_amount = risk_manager.calculate_position_size(
+                            paper_trader.balance,
+                            entry_price,
+                            levels['stop_loss'],
+                            risk_per_trade=risk_per_trade
+                        )
                         final_amount = base_amount * pos_size_modifier
-                        
-                        logger.info(f"Executing paper trade: {symbol} at {entry_price:.2f} (Amount: {final_amount})")
-                        
+
+                        if final_amount <= 0:
+                            logger.info(f"Skipping {symbol}: computed position size is zero")
+                            continue
+
+                        logger.info(f"Executing paper trade: {symbol} at {entry_price:.2f} (Amount: {final_amount:.6f})")
+
                         paper_trader.place_order(
                             symbol, 
                             combined_signal.type.value, 

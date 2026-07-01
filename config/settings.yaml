@@ -11,6 +11,7 @@ exchanges:
 trading:
   default_risk_reward: 3.0
   max_drawdown: 0.1
+  risk_per_trade: 0.01  # fraction of account risked per trade (stop-loss distance)
   assets:
     - BTC/USDT
     - ETH/USDT

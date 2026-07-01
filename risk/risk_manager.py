@@ -41,9 +41,36 @@ class RiskManager:
             'tp_levels': tp_levels
         }
 
-    def validate_risk(self, account_balance, risk_per_trade=0.01):
+    def calculate_position_size(self, account_balance, entry_price, stop_loss,
+                                risk_per_trade=0.01):
         """
-        Determines position size based on account risk.
+        Determine position size (in units) from account risk.
+
+        Risks a fixed fraction of the account (``risk_per_trade``) on the
+        distance between entry and stop-loss, so that a stop-out loses exactly
+        that fraction:  size = (balance * risk_per_trade) / |entry - stop_loss|.
+
+        Returns 0.0 when inputs are non-positive or the stop distance is zero,
+        so callers never place a trade with undefined/infinite size.
         """
-        # Implementation for position sizing
-        pass
+        if account_balance <= 0 or entry_price <= 0:
+            return 0.0
+        if not 0 < risk_per_trade < 1:
+            raise ValueError("risk_per_trade must be between 0 and 1")
+
+        risk_capital = account_balance * risk_per_trade
+        per_unit_risk = abs(entry_price - stop_loss)
+        if per_unit_risk <= 0:
+            return 0.0
+
+        size = risk_capital / per_unit_risk
+
+        # Never let a single position exceed the account's buying power.
+        max_size = account_balance / entry_price
+        return min(size, max_size)
+
+    def validate_risk(self, account_balance, entry_price, stop_loss,
+                      risk_per_trade=0.01):
+        """Backwards-compatible alias for :meth:`calculate_position_size`."""
+        return self.calculate_position_size(account_balance, entry_price,
+                                            stop_loss, risk_per_trade)

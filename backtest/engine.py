@@ -116,9 +116,9 @@ class BacktestTrader:
         return unrealized
 
 class BacktestEngine:
-    def __init__(self, strategies: List, initial_capital: float = 100000.0):
+    def __init__(self, strategies: List, risk_manager: RiskManager = None, initial_capital: float = 100000.0):
         self.strategies = strategies
-        self.risk_manager = RiskManager()
+        self.risk_manager = risk_manager or RiskManager()
         self.trader = BacktestTrader(initial_balance=initial_capital)
 
     def run(self, data_df: pd.DataFrame, macro_data: List[Dict] = None):
@@ -150,8 +150,12 @@ class BacktestEngine:
                 for sym in symbols:
                     if sym in self.trader.positions: continue # Don't stack positions for now
                     
-                    asset_history = data_df.iloc[:i+1][sym]
-                    
+                    asset_history = data_df.iloc[:i+1][sym].copy()
+                    # Preserve the symbol so strategies tag signals correctly;
+                    # otherwise positions get keyed by a fallback name and never
+                    # reconcile against current_prices in trader.update().
+                    asset_history.attrs['symbol'] = sym
+
                     for strat in self.strategies:
                         if strat.name == "MacroRegimeDetection": continue
                         

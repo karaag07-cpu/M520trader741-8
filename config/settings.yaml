@@ -11,6 +11,8 @@ exchanges:
 trading:
   default_risk_reward: 3.0
   max_drawdown: 0.1
+  risk_per_trade: 0.01          # fraction of equity risked per trade
+  max_position_fraction: 0.25   # cap on a single position's notional
   assets:
     - BTC/USDT
     - ETH/USDT

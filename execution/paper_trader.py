@@ -51,6 +51,23 @@ class PaperTrader:
             elif position['side'] == 'SELL' and current_price <= position['take_profit']:
                 self._close_position(symbol, current_price, 'TAKE_PROFIT')
 
+    def close_all_positions(self, current_prices=None, reason='KILL_SWITCH'):
+        """Flatten every open position. Used by the kill switch to ensure no
+        position is left unmanaged when trading halts.
+
+        Positions are closed at the supplied current price; if a price is not
+        available for a symbol, the position is closed at its entry price
+        (realising zero P&L) so nothing is left open. Returns the number of
+        positions closed.
+        """
+        current_prices = current_prices or {}
+        count = 0
+        for symbol, position in list(self.positions.items()):
+            close_price = current_prices.get(symbol, position['entry_price'])
+            self._close_position(symbol, close_price, reason)
+            count += 1
+        return count
+
     def _close_position(self, symbol, close_price, reason):
         position = self.positions.pop(symbol)
         position['close_price'] = close_price
@@ -69,6 +86,15 @@ class PaperTrader:
         print(f"Closed {symbol} {position['side']} at {close_price} Reason: {reason} PnL: {pnl}")
 
     def get_portfolio_value(self, current_prices):
+        """Total account value: cash balance plus the unrealised P&L of every
+        open position marked to the current market price."""
         total_value = self.balance
-        # In a real implementation, add current value of open positions
+        for symbol, position in self.positions.items():
+            price = current_prices.get(symbol)
+            if price is None:
+                continue
+            if position['side'] == 'BUY':
+                total_value += (price - position['entry_price']) * position['amount']
+            else:
+                total_value += (position['entry_price'] - price) * position['amount']
         return total_value

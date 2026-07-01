@@ -8,6 +8,9 @@ exchanges:
     api_secret: "${ALPACA_API_SECRET}"
     paper: true
 
+macro:
+  fred_api_key: "${FRED_API_KEY}"
+
 trading:
   default_risk_reward: 3.0
   max_drawdown: 0.1

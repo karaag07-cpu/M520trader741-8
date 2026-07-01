@@ -87,7 +87,11 @@ def main():
             
             # 4. Process each Asset Class
             all_symbols = symbols_to_fetch['crypto'] + symbols_to_fetch['stocks'] + symbols_to_fetch['forex']
-            
+
+            # Track the latest observed price per symbol so open positions are
+            # marked-to-market against real data this cycle, not a fresh random draw.
+            current_market_prices = {}
+
             for symbol in all_symbols:
                 # Find data in results
                 df = None
@@ -100,7 +104,8 @@ def main():
                     df = generate_mock_ohlcv(symbol, length=300)
                 
                 df.attrs['symbol'] = symbol
-                
+                current_market_prices[symbol] = df['close'].iloc[-1]
+
                 # 5. Signal Generation
                 signals = []
                 for strategy in strategies:
@@ -185,13 +190,9 @@ def main():
                             take_profit=levels['tp_levels'][0]
                         )
             
-            # 10. Update positions
-            current_market_prices = {}
-            for s in all_symbols:
-                # Mock current price for update (or use real if available)
-                latest = generate_mock_ohlcv(s, length=1)
-                current_market_prices[s] = latest['close'].iloc[0]
-                
+            # 10. Update positions against the prices actually observed this
+            # cycle (collected above from the fetched data / fallback series),
+            # so stop-loss and take-profit trigger on real market moves.
             paper_trader.update_positions(current_market_prices)
             
             logger.info(f"Current Balance: {paper_trader.balance:.2f}")

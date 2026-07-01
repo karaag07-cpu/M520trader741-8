@@ -13,6 +13,7 @@ from signals.base_strategy import SignalType
 from risk.risk_manager import RiskManager
 from execution.paper_trader import PaperTrader
 from data.fetchers import DataPipeline
+from data.processors import latest_atr
 
 def main():
     # 1. Setup
@@ -27,6 +28,8 @@ def main():
     trading_cfg = config.get('trading', {})
     risk_manager = RiskManager(risk_reward_ratio=trading_cfg.get('default_risk_reward', 3.0))
     risk_per_trade = trading_cfg.get('risk_per_trade', 0.01)
+    atr_period = trading_cfg.get('atr_period', 14)
+    atr_stop_mult = trading_cfg.get('atr_stop_mult', 2.0)
     paper_trader = PaperTrader(initial_balance=10000)
     
     # Initialize Data Pipeline
@@ -157,11 +160,14 @@ def main():
                     logger.info(f"Consensus Signal for {symbol}: {combined_signal.type} ({combined_signal.conviction.name})")
                     
                     current_price = df['close'].iloc[-1]
-                    
-                    # 7. Risk Management
+
+                    # 7. Risk Management (volatility-scaled stops via ATR)
+                    atr = latest_atr(df, period=atr_period)
                     levels = risk_manager.calculate_trade_levels(
-                        combined_signal.type.value, 
-                        current_price
+                        combined_signal.type.value,
+                        current_price,
+                        atr=atr,
+                        atr_stop_mult=atr_stop_mult
                     )
                     
                     if levels:

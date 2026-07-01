@@ -2,36 +2,37 @@ class RiskManager:
     def __init__(self, risk_reward_ratio=3.0):
         self.rr_ratio = risk_reward_ratio
 
-    def calculate_trade_levels(self, signal_type, current_price, volatility_data=None):
+    def calculate_trade_levels(self, signal_type, current_price, atr=None,
+                               atr_stop_mult=2.0):
         """
         Calculates Entry Zone, Stop-Loss, and Multiple Take-Profit levels.
+
+        Volatility-scaled stops: when ``atr`` (Average True Range) is provided,
+        the stop distance is ``atr_stop_mult * atr`` so it adapts to each
+        asset's volatility. When ``atr`` is None (or non-positive) it falls
+        back to a flat 1% stop. Take-profit levels are placed at the
+        risk/reward multiple of the stop distance, tiered at 1x / 1.5x / 2x.
         """
         entry_price = current_price
-        
-        # Simple implementation: 
-        # Entry zone is current_price +/- 0.1%
-        # 1% SL
-        # 3 TP levels starting at 3%
-        
-        stop_loss_pct = 0.01
-        tp_base_pct = stop_loss_pct * self.rr_ratio
-        
+
+        # Stop distance in price units: volatility-scaled if ATR is available,
+        # otherwise a flat 1% of price (preserves the original behaviour).
+        if atr is not None and atr > 0:
+            stop_distance = atr_stop_mult * atr
+        else:
+            stop_distance = entry_price * 0.01
+
+        tp_distance = self.rr_ratio * stop_distance
+        tp_mults = [1.0, 1.5, 2.0]
+
         if signal_type == "BUY" or signal_type == "SignalType.BUY":
             entry_zone = (entry_price * 0.999, entry_price * 1.001)
-            stop_loss = entry_price * (1 - stop_loss_pct)
-            tp_levels = [
-                entry_price * (1 + tp_base_pct),
-                entry_price * (1 + tp_base_pct * 1.5),
-                entry_price * (1 + tp_base_pct * 2.0)
-            ]
+            stop_loss = entry_price - stop_distance
+            tp_levels = [entry_price + tp_distance * m for m in tp_mults]
         elif signal_type == "SELL" or signal_type == "SignalType.SELL":
             entry_zone = (entry_price * 1.001, entry_price * 0.999)
-            stop_loss = entry_price * (1 + stop_loss_pct)
-            tp_levels = [
-                entry_price * (1 - tp_base_pct),
-                entry_price * (1 - tp_base_pct * 1.5),
-                entry_price * (1 - tp_base_pct * 2.0)
-            ]
+            stop_loss = entry_price + stop_distance
+            tp_levels = [entry_price - tp_distance * m for m in tp_mults]
         else:
             return None
 

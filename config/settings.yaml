@@ -12,6 +12,8 @@ trading:
   default_risk_reward: 3.0
   max_drawdown: 0.1
   risk_per_trade: 0.01  # fraction of account risked per trade (stop-loss distance)
+  atr_period: 14        # lookback (bars) for Average True Range
+  atr_stop_mult: 2.0    # stop distance = atr_stop_mult * ATR (volatility-scaled)
   assets:
     - BTC/USDT
     - ETH/USDT

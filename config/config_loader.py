@@ -4,7 +4,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def load_config(config_path='/home/team/shared/trading_bot/config/settings.yaml'):
+DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(__file__), 'settings.yaml')
+
+
+def load_config(config_path=None):
+    # Resolution order: explicit arg -> MINUTETRADER_CONFIG env var ->
+    # settings.yaml co-located with this module. No machine-specific absolute
+    # paths, so the bot runs on any host or CI runner.
+    config_path = config_path or os.environ.get('MINUTETRADER_CONFIG', DEFAULT_CONFIG_PATH)
     if not os.path.exists(config_path):
         return {}
     

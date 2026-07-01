@@ -13,6 +13,7 @@ from signals.base_strategy import SignalType
 from risk.risk_manager import RiskManager
 from execution.paper_trader import PaperTrader
 from data.fetchers import DataPipeline
+from data.processors import calculate_atr
 
 def main():
     # 1. Setup
@@ -137,33 +138,54 @@ def main():
                     logger.info(f"Consensus Signal for {symbol}: {combined_signal.type} ({combined_signal.conviction.name})")
                     
                     current_price = df['close'].iloc[-1]
-                    
-                    # 7. Risk Management
+
+                    # 7. Risk Management — volatility-aware stops via ATR.
+                    atr_value = calculate_atr(df)
                     levels = risk_manager.calculate_trade_levels(
-                        combined_signal.type.value, 
-                        current_price
+                        combined_signal.type.value,
+                        current_price,
+                        atr=atr_value
                     )
-                    
+
                     if levels:
-                        # 8. Execution
+                        # 8. Position sizing — fixed-fractional risk, scaled by
+                        # the macro regime's position-size modifier.
                         entry_price = (levels['entry_zone'][0] + levels['entry_zone'][1]) / 2
-                        
-                        # Position sizing with modifier
-                        base_amount = 0.1 # Simplified
-                        final_amount = base_amount * pos_size_modifier
-                        
-                        logger.info(f"Executing paper trade: {symbol} at {entry_price:.2f} (Amount: {final_amount})")
-                        
+
+                        risk_per_trade = config.get('trading', {}).get('risk_per_trade', 0.01)
+                        max_position_fraction = config.get('trading', {}).get('max_position_fraction', 0.25)
+
+                        sizing = risk_manager.validate_risk(
+                            account_balance=paper_trader.balance,
+                            entry_price=entry_price,
+                            stop_loss=levels['stop_loss'],
+                            risk_per_trade=risk_per_trade,
+                            max_position_fraction=max_position_fraction,
+                            size_modifier=pos_size_modifier
+                        )
+
+                        if not sizing:
+                            logger.info(f"Skipping {symbol}: no valid position size for current risk inputs")
+                            continue
+
+                        final_amount = sizing['quantity']
+                        logger.info(
+                            f"Executing paper trade: {symbol} at {entry_price:.2f} "
+                            f"(Qty: {final_amount:.6f}, Notional: {sizing['notional']:.2f}, "
+                            f"Risk: {sizing['risk_amount']:.2f})"
+                        )
+
+                        # 9. Execution
                         paper_trader.place_order(
-                            symbol, 
-                            combined_signal.type.value, 
-                            final_amount, 
+                            symbol,
+                            combined_signal.type.value,
+                            final_amount,
                             entry_price,
                             stop_loss=levels['stop_loss'],
                             take_profit=levels['tp_levels'][0]
                         )
             
-            # 9. Update positions
+            # 10. Update positions
             current_market_prices = {}
             for s in all_symbols:
                 # Mock current price for update (or use real if available)

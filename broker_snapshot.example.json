@@ -1,0 +1,8 @@
+{
+  "_comment": "Copy to broker_snapshot.json (gitignored) and fill in your real broker positions. The bot reconciles its paper positions against this each cycle and surfaces any drift on the dashboard. Set MINUTETRADER_BROKER_SNAPSHOT to use a different path.",
+  "positions": [
+    { "symbol": "BTC/USD", "qty": 0.05 },
+    { "symbol": "AAPL", "amount": 10, "side": "BUY" },
+    { "symbol": "TSLA", "amount": 3, "side": "SELL" }
+  ]
+}

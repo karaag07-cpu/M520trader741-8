@@ -14,6 +14,7 @@ from signals.base_strategy import SignalType
 from risk.risk_manager import RiskManager
 from execution.paper_trader import PaperTrader
 from execution.status_reporter import build_status, write_status
+from execution.reconciliation import reconcile_paper_trader
 from data.fetchers import DataPipeline
 from data.processors import calculate_atr
 from data.macro_features import derive_macro_params
@@ -195,6 +196,12 @@ class TradingBot:
         try:
             regime_meta = macro_signal.metadata if macro_signal else {}
             status = build_status(self.paper_trader, current_market_prices, regime=regime_meta)
+            # Reconcile against a broker snapshot if one is present.
+            reconciliation = reconcile_paper_trader(self.paper_trader)
+            if reconciliation is not None:
+                status['reconciliation'] = reconciliation
+                if not reconciliation['in_sync']:
+                    logger.warning("Positions out of sync with broker snapshot")
             write_status(status)
         except Exception as e:
             logger.error(f"Failed to write status snapshot: {e}")

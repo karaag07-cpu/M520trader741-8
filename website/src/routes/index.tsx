@@ -43,8 +43,7 @@ function Home() {
       flower: "/flower-rose.svg",
       shape: "organic-shape-1",
       offset: "md:translate-y-12",
-      top: "0%",
-      left: "0%"
+      desktopStyle: { top: "5%", left: "5%" }
     },
     {
       name: "Relative Strength",
@@ -55,8 +54,7 @@ function Home() {
       flower: "/flower-sage.svg",
       shape: "organic-shape-2",
       offset: "md:-translate-y-8",
-      top: "35%",
-      left: "32%"
+      desktopStyle: { top: "35%", left: "35%" }
     },
     {
       name: "Cross-Asset Intelligence",
@@ -67,8 +65,7 @@ function Home() {
       flower: "/flower-lavender.svg",
       shape: "organic-shape-1",
       offset: "md:translate-y-24",
-      top: "70%",
-      left: "64%"
+      desktopStyle: { top: "65%", left: "60%" }
     },
     {
       name: "Sentiment & Flow",
@@ -79,8 +76,7 @@ function Home() {
       flower: "/flower-wildflower.svg",
       shape: "organic-shape-2",
       offset: "md:translate-x-12",
-      top: "0%",
-      left: "45%"
+      desktopStyle: { top: "10%", left: "55%" }
     },
     {
       name: "Macro Regime Analysis",
@@ -91,8 +87,7 @@ function Home() {
       flower: "/flower-rose.svg",
       shape: "organic-shape-1",
       offset: "md:-translate-x-8 md:translate-y-12",
-      top: "35%",
-      left: "10%"
+      desktopStyle: { top: "55%", left: "10%" }
     }
   ];
 
@@ -148,28 +143,37 @@ function Home() {
         </div>
       </section>
 
-      {/* Centered Anti-Grid Strategy Layout */}
+      {/* Strategy Layout */}
       <section className="max-w-[1500px] mx-auto px-4 md:px-6 py-20 relative z-10">
-        <div className="flex flex-col md:block items-center gap-12 md:gap-0 relative min-h-0 md:min-h-[1500px]">
+        <div className="flex flex-col md:block items-center gap-8 md:gap-0 relative min-h-0 md:min-h-[1400px]">
           {strategies.map((s, i) => (
             <div 
               key={i} 
-              className={`organic-card relative md:absolute group hover:-translate-y-8 transition-all duration-1000 ${s.shape} ${s.offset} ${s.borderColor}`}
+              className={`organic-card w-full max-w-md md:max-w-none md:absolute group hover:-translate-y-8 transition-all duration-1000 ${s.shape} ${s.offset} ${s.borderColor}`}
               style={{ 
-                width: 'min(520px, 95vw)',
-                zIndex: 10 + i
+                zIndex: 10 + i,
+                // Inlined media query equivalent for desktop absolute positioning
+                ...(typeof window !== 'undefined' && window.innerWidth >= 768 ? {
+                  top: s.desktopStyle.top,
+                  left: s.desktopStyle.left,
+                  width: 'min(520px, 35vw)',
+                  position: 'absolute'
+                } : {})
               }}
             >
+              {/* CSS Injection for Desktop positioning to avoid hydration issues */}
               <style dangerouslySetInnerHTML={{ __html: `
                 @media (min-width: 768px) {
                   .strategy-card-${i} {
-                    top: ${s.top};
-                    left: ${s.left};
+                    top: ${s.desktopStyle.top} !important;
+                    left: ${s.desktopStyle.left} !important;
+                    width: min(520px, 35vw) !important;
                     position: absolute !important;
                   }
                 }
               `}} />
-              <div className={`w-full h-full flex flex-col items-center justify-center strategy-card-${i}`}>
+              
+              <div className={`w-full flex flex-col items-center justify-center strategy-card-${i}`}>
                 {/* Floral Corner Accent */}
                 <FlowerIcon src={s.flower} className="flower-accent -top-12 -right-12 md:-top-16 md:-right-16 w-32 h-32 md:w-40 md:h-40 opacity-100" />
                 
@@ -178,11 +182,11 @@ function Home() {
                   <MoonIcon className={`w-6 h-6 md:w-8 md:h-8 ${s.color}`} />
                 </div>
                 
-                <h3 className="text-3xl md:text-5xl font-bold text-[#1a1c17] dark:text-white mb-6 md:mb-10 tracking-widest relative z-10 px-4">
+                <h3 className="text-3xl md:text-5xl font-bold text-[#1a1c17] dark:text-white mb-6 md:mb-10 tracking-widest relative z-10 px-4 text-center">
                   {s.name}
                 </h3>
                 
-                <p className="text-[#1a1c17] dark:text-[#ffffff] leading-relaxed text-lg md:text-2xl font-medium italic font-botanical relative z-10 px-6">
+                <p className="text-[#1a1c17] dark:text-[#ffffff] leading-relaxed text-lg md:text-2xl font-medium italic font-botanical relative z-10 px-6 text-center">
                   {s.description}
                 </p>
               </div>
@@ -190,8 +194,8 @@ function Home() {
           ))}
           
           {/* Central Decorative Elements */}
-          <div className="hidden lg:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] border-[6px] border-sage-soft rounded-full pointer-events-none" />
-          <div className="hidden lg:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px] border-[3px] border-rose-soft rounded-full pointer-events-none" />
+          <div className="hidden lg:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border-[6px] border-sage-soft rounded-full pointer-events-none" />
+          <div className="hidden lg:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] border-[3px] border-rose-soft rounded-full pointer-events-none" />
           <FlowerIcon src="/flower-wildflower.svg" className="hidden lg:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 opacity-30" />
         </div>
       </section>
@@ -216,7 +220,7 @@ function Home() {
         </div>
       </section>
 
-      {/* Footer with Floral Header */}
+      {/* Footer Section */}
       <footer className="pt-40 md:pt-80 pb-20 px-6 text-center relative">
         <div className="absolute top-20 md:top-40 left-1/2 -translate-x-1/2 w-full flex justify-center gap-8 md:gap-16">
            <FlowerIcon src="/flower-rose.svg" className="w-16 h-16 md:w-32 md:h-32" />

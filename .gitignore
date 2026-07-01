@@ -12,3 +12,8 @@ logs/
 *.egg-info/
 dist/
 build/
+# Node / website dependencies
+node_modules/
+
+# Bot runtime status snapshot (published for the dashboard)
+website/status.json

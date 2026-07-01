@@ -17,3 +17,5 @@ node_modules/
 
 # Bot runtime status snapshot (published for the dashboard)
 website/status.json
+# User-provided broker positions snapshot (reconciliation input)
+broker_snapshot.json

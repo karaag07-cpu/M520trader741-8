@@ -27,6 +27,15 @@ type Status = {
   open_position_count: number;
   closed_trades: number;
   regime: Record<string, unknown>;
+  reconciliation?: Reconciliation;
+};
+
+type Reconciliation = {
+  in_sync: boolean;
+  checked_at: string;
+  only_in_bot: { symbol: string; bot_qty: number }[];
+  only_in_broker: { symbol: string; broker_qty: number }[];
+  quantity_mismatch: { symbol: string; bot_qty: number; broker_qty: number }[];
 };
 
 // The trading bot publishes website/status.json each cycle; read it at request
@@ -54,6 +63,32 @@ function MetricCard({ label, value, accent }: { label: string; value: string; ac
     <div className={`rounded-3xl border-4 ${accent ?? "border-sage"} bg-white p-8 shadow-xl flex flex-col gap-3`}>
       <span className="text-[10px] md:text-xs tracking-[0.3em] uppercase font-black text-sage-bold">{label}</span>
       <span className="text-3xl md:text-4xl font-bold text-[#1a1c17]">{value}</span>
+    </div>
+  );
+}
+
+function ReconciliationPanel({ r }: { r: Reconciliation }) {
+  const drift = [
+    ...r.only_in_bot.map((p) => `${p.symbol}: only in bot (${p.bot_qty})`),
+    ...r.only_in_broker.map((p) => `${p.symbol}: only at broker (${p.broker_qty})`),
+    ...r.quantity_mismatch.map((p) => `${p.symbol}: bot ${p.bot_qty} vs broker ${p.broker_qty}`),
+  ];
+  return (
+    <div className="mt-8 text-left max-w-3xl mx-auto">
+      <div
+        className={`inline-block px-8 py-4 rounded-full border-4 text-xs md:text-sm tracking-[0.2em] font-black bg-white shadow-lg uppercase ${
+          r.in_sync ? "border-sage text-sage-bold" : "border-rose text-rose-bold"
+        }`}
+      >
+        Broker Reconciliation: {r.in_sync ? "In sync ✓" : "Out of sync"}
+      </div>
+      {!r.in_sync && (
+        <ul className="mt-4 rounded-3xl border-4 border-rose bg-white shadow-lg p-6 space-y-2 text-[#1a1c17] font-medium">
+          {drift.map((line, i) => (
+            <li key={i}>• {line}</li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -123,6 +158,8 @@ function Dashboard() {
                 )}
               </div>
             )}
+
+            {status.reconciliation && <ReconciliationPanel r={status.reconciliation} />}
 
             <div className="mt-16 text-left">
               <h2 className="text-2xl md:text-4xl font-bold text-[#1a1c17] dark:text-white mb-8 tracking-widest text-center">

@@ -101,6 +101,17 @@ With `exchanges.alpaca.paper: true` this uses your **paper** account — real
 order flow, **no real money**. (Pointing at live keys would place real trades;
 only do that once you've thoroughly paper-tested and understand the risk.)
 
+When `broker: alpaca` is set, the bot:
+- **sizes positions off your real Alpaca equity** (not the $10k simulator),
+- **skips symbols you already hold** on Alpaca (no pile-up), and
+- makes the **dashboard mirror your live Alpaca account** (balance + positions),
+  so the website and the Alpaca dashboard match.
+
+**Exit handling:** equity orders are submitted as **bracket orders**, so Alpaca
+auto-manages the stop-loss / take-profit. Alpaca crypto doesn't support brackets,
+so crypto entries are plain market orders — their exits aren't auto-managed yet
+(close them on Alpaca manually, or keep `broker: paper` for crypto exit logic).
+
 ### Live Dashboard
 
 The website surfaces the bot's live state (balance, open positions, PnL, macro

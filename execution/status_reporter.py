@@ -58,6 +58,47 @@ def build_status(paper_trader, prices=None, regime=None, updated_at=None):
         'open_position_count': len(positions),
         'closed_trades': len(paper_trader.trade_history),
         'regime': regime or {},
+        'source': 'simulator',
+    }
+
+
+def build_alpaca_status(account, positions, regime=None, updated_at=None):
+    """Build the dashboard snapshot from a live Alpaca account + positions.
+
+    ``account`` is AlpacaBroker.get_account() and ``positions`` is
+    AlpacaBroker.get_positions(). Produces the same shape as ``build_status``
+    so the dashboard renders identically whether the source is the simulator
+    or the real Alpaca account.
+    """
+    open_positions = []
+    committed = 0.0
+    for p in positions:
+        amount = abs(p.get('qty', 0))
+        entry = p.get('entry_price', 0)
+        committed += amount * entry
+        open_positions.append({
+            'symbol': p['symbol'],
+            'side': p['side'],
+            'amount': amount,
+            'entry_price': entry,
+            'current_price': p.get('current_price', 0),
+            'stop_loss': None,
+            'take_profit': None,
+            'unrealized_pnl': p.get('unrealized_pnl', 0),
+        })
+
+    portfolio_value = account.get('portfolio_value') or account.get('equity', 0)
+    return {
+        'updated_at': updated_at or datetime.now(timezone.utc).isoformat(),
+        'balance': account.get('cash', 0),
+        'portfolio_value': portfolio_value,
+        'committed_capital': committed,
+        'available_buying_power': account.get('buying_power', 0),
+        'open_positions': open_positions,
+        'open_position_count': len(open_positions),
+        'closed_trades': 0,
+        'regime': regime or {},
+        'source': 'alpaca',
     }
 
 

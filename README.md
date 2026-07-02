@@ -84,6 +84,23 @@ risk-managed sizing, and publishes a snapshot to `website/status.json`.
 To halt trading immediately, create a `killswitch.lock` file in the project
 root; delete it to resume.
 
+### Order execution: local vs Alpaca
+
+By default (`trading.broker: paper` in `settings.yaml`) the bot trades a **local
+simulator** — orders never reach Alpaca, so nothing appears on the Alpaca
+dashboard. To also submit orders to your **Alpaca account** (so positions show
+up there and reconcile automatically), set:
+
+```yaml
+trading:
+  broker: alpaca      # mirror orders to Alpaca (paper account while
+                      # exchanges.alpaca.paper is true)
+```
+
+With `exchanges.alpaca.paper: true` this uses your **paper** account — real
+order flow, **no real money**. (Pointing at live keys would place real trades;
+only do that once you've thoroughly paper-tested and understand the risk.)
+
 ### Live Dashboard
 
 The website surfaces the bot's live state (balance, open positions, PnL, macro

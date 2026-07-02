@@ -16,6 +16,9 @@ trading:
   max_drawdown: 0.1
   risk_per_trade: 0.01          # fraction of equity risked per trade
   max_position_fraction: 0.25   # cap on a single position's notional
+  broker: paper                 # "paper" = local simulation only;
+                                # "alpaca" = also submit orders to your Alpaca
+                                # account (paper account when exchanges.alpaca.paper is true)
   assets:
     - BTC/USDT
     - ETH/USDT

@@ -14,7 +14,8 @@ from signals.base_strategy import SignalType
 from risk.risk_manager import RiskManager
 from execution.paper_trader import PaperTrader
 from execution.status_reporter import build_status, write_status
-from execution.reconciliation import reconcile_paper_trader
+from execution.reconciliation import reconcile_paper_trader, reconcile
+from execution.alpaca_broker import AlpacaBroker
 from data.fetchers import DataPipeline
 from data.processors import calculate_atr
 from data.macro_features import derive_macro_params
@@ -49,6 +50,11 @@ class TradingBot:
         if self.paper_trader.load_state():
             self.logger.info(f"Resumed paper state: balance {self.paper_trader.balance:.2f}, "
                              f"{len(self.paper_trader.positions)} open position(s)")
+        # Optional: mirror orders to a real Alpaca account (paper by default) so
+        # positions appear on the Alpaca dashboard. Opt in with trading.broker:
+        # alpaca. Stays None (local simulation only) unless configured + keyed.
+        self.broker = self._init_broker(trading_cfg)
+
         self.pipeline = DataPipeline(self.config)
         self.combiner = SignalCombiner()
         self.strategies = [
@@ -59,6 +65,25 @@ class TradingBot:
             MacroRegimeStrategy("Macro Filter", "1d"),
         ]
         self.logger.info(f"Initialized {len(self.strategies)} strategies")
+        if self.broker:
+            self.logger.info("Alpaca broker enabled: orders will be mirrored to your Alpaca account")
+
+    def _init_broker(self, trading_cfg):
+        if trading_cfg.get('broker', 'paper') != 'alpaca':
+            return None
+        alpaca_cfg = self.config.get('exchanges', {}).get('alpaca', {})
+        if not (alpaca_cfg.get('api_key') and alpaca_cfg.get('api_secret')):
+            self.logger.warning("trading.broker=alpaca but no Alpaca keys configured; staying in local simulation")
+            return None
+        try:
+            return AlpacaBroker(
+                api_key=alpaca_cfg.get('api_key'),
+                secret_key=alpaca_cfg.get('api_secret'),
+                paper=alpaca_cfg.get('paper', True),
+            )
+        except Exception as e:
+            self.logger.error(f"Failed to init Alpaca broker (staying in simulation): {e}")
+            return None
 
     def run_cycle(self):
         """Run one full market cycle; returns the published status snapshot."""
@@ -180,7 +205,7 @@ class TradingBot:
                         f"Risk: {sizing['risk_amount']:.2f})"
                     )
 
-                    # 9. Execution
+                    # 9. Execution — always record in the local simulator...
                     self.paper_trader.place_order(
                         symbol,
                         combined_signal.type.value,
@@ -189,6 +214,13 @@ class TradingBot:
                         stop_loss=levels['stop_loss'],
                         take_profit=levels['tp_levels'][0]
                     )
+                    # ...and mirror to the real Alpaca account when enabled.
+                    if self.broker:
+                        try:
+                            self.broker.submit_order(symbol, combined_signal.type.value, final_amount)
+                            logger.info(f"Submitted {symbol} order to Alpaca")
+                        except Exception as e:
+                            logger.error(f"Alpaca order failed for {symbol}: {e}")
 
         # 10. Update positions against the prices actually observed this cycle
         # (collected above from the fetched data / fallback series), so
@@ -206,12 +238,20 @@ class TradingBot:
         try:
             regime_meta = macro_signal.metadata if macro_signal else {}
             status = build_status(self.paper_trader, current_market_prices, regime=regime_meta)
-            # Reconcile against a broker snapshot if one is present.
-            reconciliation = reconcile_paper_trader(self.paper_trader)
+            # Reconcile: prefer live Alpaca positions when the broker is enabled,
+            # otherwise fall back to a broker snapshot file if present.
+            reconciliation = None
+            if self.broker:
+                try:
+                    reconciliation = reconcile(self.paper_trader.positions, self.broker.get_positions())
+                except Exception as e:
+                    logger.error(f"Alpaca reconciliation failed: {e}")
+            else:
+                reconciliation = reconcile_paper_trader(self.paper_trader)
             if reconciliation is not None:
                 status['reconciliation'] = reconciliation
                 if not reconciliation['in_sync']:
-                    logger.warning("Positions out of sync with broker snapshot")
+                    logger.warning("Positions out of sync with broker")
             write_status(status)
         except Exception as e:
             logger.error(f"Failed to write status snapshot: {e}")

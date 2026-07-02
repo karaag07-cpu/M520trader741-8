@@ -24,7 +24,7 @@ KILLSWITCH_PATH = 'killswitch.lock'
 DEFAULT_SYMBOLS = {
     'crypto': ['BTC/USD', 'ETH/USD', 'SOL/USD'],  # Alpaca crypto symbol format
     'stocks': ['AAPL', 'TSLA', 'QQQ'],
-    'forex': ['EUR/USD', 'GBP/USD'],
+    'forex': [],  # Alpaca does not offer forex; leave empty (or wire OANDA to enable)
     'macro': ['T10Y2Y', 'CPIAUCSL', 'FEDFUNDS', 'UNRATE'],
 }
 

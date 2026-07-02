@@ -39,5 +39,10 @@ def log_trade_attempt(symbol, side, amount, price, status, message=""):
             logger.error(f"Failed to log trade to DB: {result.stderr}")
         else:
             logger.debug(f"Trade logged to DB: {symbol} {side}")
+    except FileNotFoundError:
+        # The team-db CLI isn't installed (the common case outside the original
+        # team's infra). DB logging is optional, so note it quietly rather than
+        # spamming an error on every trade — the trade itself still executes.
+        logger.debug("team-db CLI not found; skipping trade DB logging")
     except Exception as e:
         logger.error(f"Error calling team-db: {e}")

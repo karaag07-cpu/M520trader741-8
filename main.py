@@ -45,6 +45,10 @@ class TradingBot:
         trading_cfg = self.config.get('trading', {})
         self.risk_manager = RiskManager(risk_reward_ratio=trading_cfg.get('default_risk_reward', 3.0))
         self.paper_trader = PaperTrader(initial_balance=trading_cfg.get('initial_balance', 10000))
+        # Resume prior balance/positions across restarts, if a state file exists.
+        if self.paper_trader.load_state():
+            self.logger.info(f"Resumed paper state: balance {self.paper_trader.balance:.2f}, "
+                             f"{len(self.paper_trader.positions)} open position(s)")
         self.pipeline = DataPipeline(self.config)
         self.combiner = SignalCombiner()
         self.strategies = [
@@ -190,6 +194,12 @@ class TradingBot:
         # (collected above from the fetched data / fallback series), so
         # stop-loss and take-profit trigger on real market moves.
         self.paper_trader.update_positions(current_market_prices)
+
+        # Persist balance/positions so the next run resumes where this left off.
+        try:
+            self.paper_trader.save_state()
+        except Exception as e:
+            logger.error(f"Failed to save paper state: {e}")
 
         # 11. Publish a status snapshot for the website dashboard to read.
         status = None

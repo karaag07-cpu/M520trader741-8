@@ -1,4 +1,18 @@
+import json
+import os
+import tempfile
+
 from utils.db_logger import log_trade_attempt
+
+
+def default_state_path():
+    """Where the paper trader persists its state between runs.
+
+    ``$MINUTETRADER_STATE_PATH`` overrides; defaults to ``paper_state.json`` in
+    the current working directory.
+    """
+    return os.environ.get('MINUTETRADER_STATE_PATH', 'paper_state.json')
+
 
 class PaperTrader:
     def __init__(self, initial_balance=100000):
@@ -117,3 +131,44 @@ class PaperTrader:
             else:
                 total_value += (position['entry_price'] - price) * position['amount']
         return total_value
+
+    # -- persistence -----------------------------------------------------
+    def to_dict(self):
+        """Serialize account state to a JSON-safe dict."""
+        return {
+            'balance': self.balance,
+            'positions': self.positions,
+            'trade_history': self.trade_history,
+        }
+
+    def load_dict(self, data):
+        """Restore account state from a dict produced by ``to_dict``."""
+        self.balance = data.get('balance', self.balance)
+        self.positions = data.get('positions', {}) or {}
+        self.trade_history = data.get('trade_history', []) or []
+
+    def save_state(self, path=None):
+        """Atomically persist state so positions/balance survive restarts."""
+        path = path or default_state_path()
+        directory = os.path.dirname(path)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(dir=directory or '.', suffix='.tmp')
+        try:
+            with os.fdopen(fd, 'w') as fh:
+                json.dump(self.to_dict(), fh, indent=2, default=str)
+            os.replace(tmp, path)
+        except Exception:
+            if os.path.exists(tmp):
+                os.remove(tmp)
+            raise
+        return path
+
+    def load_state(self, path=None):
+        """Load persisted state if the file exists; returns True if loaded."""
+        path = path or default_state_path()
+        if not os.path.exists(path):
+            return False
+        with open(path) as fh:
+            self.load_dict(json.load(fh))
+        return True

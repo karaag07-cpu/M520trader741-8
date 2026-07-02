@@ -19,3 +19,5 @@ node_modules/
 website/status.json
 # User-provided broker positions snapshot (reconciliation input)
 broker_snapshot.json
+# Persisted paper-trading state (balance/positions across restarts)
+paper_state.json

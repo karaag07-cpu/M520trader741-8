@@ -17,10 +17,16 @@ def _quiet_logger():
 class TestScheduling(unittest.TestCase):
     def setUp(self):
         # Empty config -> no live fetchers -> mock-data fallback (no network).
+        # Redirect persisted state to a temp file so tests don't touch the repo.
+        self._state_path = os.path.join(
+            os.environ.get('TMPDIR', '/tmp'), 'mt_sched_state.json'
+        )
+        self.addCleanup(lambda: os.path.exists(self._state_path) and os.remove(self._state_path))
         # Patch side effects: status file write + the paper trader's DB logger.
         self._patchers = [
             patch('main.write_status', lambda *a, **k: None),
             patch('execution.paper_trader.log_trade_attempt'),
+            patch.dict(os.environ, {'MINUTETRADER_STATE_PATH': self._state_path}),
         ]
         for p in self._patchers:
             p.start()

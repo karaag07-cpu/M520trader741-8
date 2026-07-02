@@ -13,8 +13,8 @@ from signals.combiner import SignalCombiner
 from signals.base_strategy import SignalType
 from risk.risk_manager import RiskManager
 from execution.paper_trader import PaperTrader
-from execution.status_reporter import build_status, write_status
-from execution.reconciliation import reconcile_paper_trader, reconcile
+from execution.status_reporter import build_status, build_alpaca_status, write_status
+from execution.reconciliation import reconcile_paper_trader
 from execution.alpaca_broker import AlpacaBroker
 from data.fetchers import DataPipeline
 from data.processors import calculate_atr
@@ -110,6 +110,18 @@ class TradingBot:
                     pos_size_modifier = macro_signal.metadata.get('position_size_modifier', 1.0)
                     logger.info(f"Macro Regime: {macro_signal.metadata['regime']} (Bias: {macro_signal.metadata['global_bias']}, Modifier: {pos_size_modifier})")
 
+        # When mirroring to Alpaca, size off the real account and skip symbols
+        # already held there. Fetch the account/positions once per cycle.
+        alpaca_account = None
+        alpaca_held = set()
+        if self.broker:
+            try:
+                alpaca_account = self.broker.get_account()
+                alpaca_held = {p['symbol'] for p in self.broker.get_positions()}
+            except Exception as e:
+                logger.error(f"Could not read Alpaca account: {e}")
+        account_balance = alpaca_account['equity'] if alpaca_account else self.paper_trader.balance
+
         # 4. Process each Asset Class
         all_symbols = symbols_to_fetch['crypto'] + symbols_to_fetch['stocks'] + symbols_to_fetch['forex']
 
@@ -186,7 +198,7 @@ class TradingBot:
                     max_position_fraction = config.get('trading', {}).get('max_position_fraction', 0.25)
 
                     sizing = self.risk_manager.validate_risk(
-                        account_balance=self.paper_trader.balance,
+                        account_balance=account_balance,
                         entry_price=entry_price,
                         stop_loss=levels['stop_loss'],
                         risk_per_trade=risk_per_trade,
@@ -199,64 +211,78 @@ class TradingBot:
                         continue
 
                     final_amount = sizing['quantity']
-                    logger.info(
-                        f"Executing paper trade: {symbol} at {entry_price:.2f} "
-                        f"(Qty: {final_amount:.6f}, Notional: {sizing['notional']:.2f}, "
-                        f"Risk: {sizing['risk_amount']:.2f})"
-                    )
 
-                    # 9. Execution — always record in the local simulator...
-                    self.paper_trader.place_order(
-                        symbol,
-                        combined_signal.type.value,
-                        final_amount,
-                        entry_price,
-                        stop_loss=levels['stop_loss'],
-                        take_profit=levels['tp_levels'][0]
-                    )
-                    # ...and mirror to the real Alpaca account when enabled.
+                    # 9. Execution
                     if self.broker:
+                        # Mirror to Alpaca; skip symbols already held there so
+                        # positions don't pile up. Equities get a bracket order
+                        # (Alpaca manages the stop/target); crypto is a plain
+                        # market order (see README on exit handling).
+                        if symbol in alpaca_held:
+                            continue
+                        logger.info(
+                            f"Submitting {symbol} to Alpaca: {combined_signal.type.value} "
+                            f"qty {final_amount:.6f} (~${sizing['notional']:.2f})"
+                        )
                         try:
-                            self.broker.submit_order(symbol, combined_signal.type.value, final_amount)
-                            logger.info(f"Submitted {symbol} order to Alpaca")
+                            self.broker.submit_order(
+                                symbol, combined_signal.type.value, final_amount,
+                                take_profit=levels['tp_levels'][0],
+                                stop_loss=levels['stop_loss'],
+                            )
+                            alpaca_held.add(symbol)
                         except Exception as e:
                             logger.error(f"Alpaca order failed for {symbol}: {e}")
+                    else:
+                        logger.info(
+                            f"Executing paper trade: {symbol} at {entry_price:.2f} "
+                            f"(Qty: {final_amount:.6f}, Notional: {sizing['notional']:.2f}, "
+                            f"Risk: {sizing['risk_amount']:.2f})"
+                        )
+                        self.paper_trader.place_order(
+                            symbol,
+                            combined_signal.type.value,
+                            final_amount,
+                            entry_price,
+                            stop_loss=levels['stop_loss'],
+                            take_profit=levels['tp_levels'][0]
+                        )
 
-        # 10. Update positions against the prices actually observed this cycle
-        # (collected above from the fetched data / fallback series), so
-        # stop-loss and take-profit trigger on real market moves.
-        self.paper_trader.update_positions(current_market_prices)
-
-        # Persist balance/positions so the next run resumes where this left off.
-        try:
-            self.paper_trader.save_state()
-        except Exception as e:
-            logger.error(f"Failed to save paper state: {e}")
-
-        # 11. Publish a status snapshot for the website dashboard to read.
+        regime_meta = macro_signal.metadata if macro_signal else {}
         status = None
-        try:
-            regime_meta = macro_signal.metadata if macro_signal else {}
-            status = build_status(self.paper_trader, current_market_prices, regime=regime_meta)
-            # Reconcile: prefer live Alpaca positions when the broker is enabled,
-            # otherwise fall back to a broker snapshot file if present.
-            reconciliation = None
-            if self.broker:
-                try:
-                    reconciliation = reconcile(self.paper_trader.positions, self.broker.get_positions())
-                except Exception as e:
-                    logger.error(f"Alpaca reconciliation failed: {e}")
-            else:
-                reconciliation = reconcile_paper_trader(self.paper_trader)
-            if reconciliation is not None:
-                status['reconciliation'] = reconciliation
-                if not reconciliation['in_sync']:
-                    logger.warning("Positions out of sync with broker")
-            write_status(status)
-        except Exception as e:
-            logger.error(f"Failed to write status snapshot: {e}")
 
-        logger.info(f"Current Balance: {self.paper_trader.balance:.2f}")
+        if self.broker:
+            # Dashboard mirrors the live Alpaca account (balance + positions);
+            # Alpaca manages equity exits via the bracket orders submitted above.
+            try:
+                account = alpaca_account or self.broker.get_account()
+                positions = self.broker.get_positions()
+                status = build_alpaca_status(account, positions, regime=regime_meta)
+                write_status(status)
+                logger.info(f"Alpaca equity: {account.get('equity', 0):.2f} "
+                            f"({len(positions)} position(s))")
+            except Exception as e:
+                logger.error(f"Failed to publish Alpaca status: {e}")
+        else:
+            # Local simulator: manage exits, persist, publish, and reconcile
+            # against a broker snapshot file if one is present.
+            self.paper_trader.update_positions(current_market_prices)
+            try:
+                self.paper_trader.save_state()
+            except Exception as e:
+                logger.error(f"Failed to save paper state: {e}")
+            try:
+                status = build_status(self.paper_trader, current_market_prices, regime=regime_meta)
+                reconciliation = reconcile_paper_trader(self.paper_trader)
+                if reconciliation is not None:
+                    status['reconciliation'] = reconciliation
+                    if not reconciliation['in_sync']:
+                        logger.warning("Positions out of sync with broker snapshot")
+                write_status(status)
+            except Exception as e:
+                logger.error(f"Failed to write status snapshot: {e}")
+            logger.info(f"Current Balance: {self.paper_trader.balance:.2f}")
+
         return status
 
     def killswitch_active(self):

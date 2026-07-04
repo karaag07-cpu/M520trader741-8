@@ -21,3 +21,5 @@ website/status.json
 broker_snapshot.json
 # Persisted paper-trading state (balance/positions across restarts)
 paper_state.json
+# Tracked crypto stop/target brackets (software exits)
+crypto_exits.json

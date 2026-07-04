@@ -16,6 +16,7 @@ from execution.paper_trader import PaperTrader
 from execution.status_reporter import build_status, build_alpaca_status, write_status
 from execution.reconciliation import reconcile_paper_trader
 from execution.alpaca_broker import AlpacaBroker
+from execution.crypto_exits import CryptoExitTracker
 from data.fetchers import DataPipeline
 from data.processors import calculate_atr
 from data.macro_features import derive_macro_params
@@ -54,6 +55,8 @@ class TradingBot:
         # positions appear on the Alpaca dashboard. Opt in with trading.broker:
         # alpaca. Stays None (local simulation only) unless configured + keyed.
         self.broker = self._init_broker(trading_cfg)
+        # Software stop/target tracker for crypto (Alpaca can't bracket crypto).
+        self.crypto_exits = CryptoExitTracker() if self.broker else None
 
         self.pipeline = DataPipeline(self.config)
         self.combiner = SignalCombiner()
@@ -117,7 +120,18 @@ class TradingBot:
         if self.broker:
             try:
                 alpaca_account = self.broker.get_account()
-                alpaca_held = {p['symbol'] for p in self.broker.get_positions()}
+                alpaca_positions = self.broker.get_positions()
+                alpaca_held = {p['symbol'] for p in alpaca_positions}
+                # Software stop/target for crypto: close any position whose
+                # tracked level has been touched (Alpaca can't bracket crypto).
+                for sym, reason in self.crypto_exits.positions_to_close(alpaca_positions):
+                    try:
+                        self.broker.close_position(sym)
+                        self.crypto_exits.discard(sym)
+                        alpaca_held.discard(sym)
+                        logger.info(f"Closed {sym} on Alpaca ({reason})")
+                    except Exception as e:
+                        logger.error(f"Failed to close {sym}: {e}")
             except Exception as e:
                 logger.error(f"Could not read Alpaca account: {e}")
         account_balance = alpaca_account['equity'] if alpaca_account else self.paper_trader.balance
@@ -231,6 +245,12 @@ class TradingBot:
                                 stop_loss=levels['stop_loss'],
                             )
                             alpaca_held.add(symbol)
+                            # Crypto has no Alpaca bracket — track its exit in software.
+                            if '/' in symbol:
+                                self.crypto_exits.record(
+                                    symbol, combined_signal.type.value,
+                                    levels['stop_loss'], levels['tp_levels'][0],
+                                )
                         except Exception as e:
                             logger.error(f"Alpaca order failed for {symbol}: {e}")
                     else:

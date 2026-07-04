@@ -108,9 +108,12 @@ When `broker: alpaca` is set, the bot:
   so the website and the Alpaca dashboard match.
 
 **Exit handling:** equity orders are submitted as **bracket orders**, so Alpaca
-auto-manages the stop-loss / take-profit. Alpaca crypto doesn't support brackets,
-so crypto entries are plain market orders — their exits aren't auto-managed yet
-(close them on Alpaca manually, or keep `broker: paper` for crypto exit logic).
+auto-manages the stop-loss / take-profit. Alpaca can't bracket crypto, so the
+bot manages **crypto exits in software**: it records each crypto position's
+stop/target (persisted in `crypto_exits.json`) and closes the position when a
+level is touched on a later cycle. (Because exits are checked once per cycle,
+crypto stops are approximate — they act on the next cycle after a level is hit,
+not tick-by-tick.)
 
 ### Live Dashboard
 

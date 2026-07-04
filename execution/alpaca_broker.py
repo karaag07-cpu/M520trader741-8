@@ -88,6 +88,10 @@ class AlpacaBroker:
             })
         return out
 
+    def close_position(self, symbol):
+        """Flatten an open position (used for software crypto exits)."""
+        return self.client.close_position(symbol)
+
     def get_account(self):
         """Return key account figures (status, cash, buying power, equity)."""
         acct = self.client.get_account()

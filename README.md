@@ -141,6 +141,19 @@ cp broker_snapshot.example.json broker_snapshot.json   # then edit with real pos
 `broker_snapshot.json` is gitignored. Override its location with
 `MINUTETRADER_BROKER_SNAPSHOT`.
 
+### Performance report
+
+Print how the bot is doing:
+
+```bash
+python scripts/report.py
+```
+
+- **Alpaca mode** — current equity, open positions with unrealized P&L, and
+  (best-effort) total return + max drawdown from Alpaca's portfolio history.
+- **Simulator mode** — realized win rate, profit factor, expectancy and max
+  drawdown from the local paper-trading history.
+
 ### Testing
 
 ```bash

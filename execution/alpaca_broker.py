@@ -92,6 +92,16 @@ class AlpacaBroker:
         """Flatten an open position (used for software crypto exits)."""
         return self.client.close_position(symbol)
 
+    def get_portfolio_history(self, period='1M', timeframe='1D'):
+        """Best-effort account equity curve (list of floats); [] on failure."""
+        try:
+            from alpaca.trading.requests import GetPortfolioHistoryRequest
+            req = GetPortfolioHistoryRequest(period=period, timeframe=timeframe)
+            hist = self.client.get_portfolio_history(req)
+            return [float(x) for x in (getattr(hist, 'equity', None) or []) if x is not None]
+        except Exception:
+            return []
+
     def get_account(self):
         """Return key account figures (status, cash, buying power, equity)."""
         acct = self.client.get_account()

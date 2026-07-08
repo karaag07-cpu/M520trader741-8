@@ -19,6 +19,9 @@ trading:
   broker: paper                 # "paper" = local simulation only;
                                 # "alpaca" = also submit orders to your Alpaca
                                 # account (paper account when exchanges.alpaca.paper is true)
+  flatten_at_close: true        # close stock positions ~5 min before the US
+                                # market close so nothing carries overnight
+                                # (crypto trades 24/7 and is unaffected)
   assets:
     - BTC/USDT
     - ETH/USDT

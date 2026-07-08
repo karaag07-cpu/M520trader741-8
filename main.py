@@ -1,6 +1,11 @@
 import argparse
 import time
 import os
+from datetime import datetime, time as dtime
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:  # pragma: no cover
+    ZoneInfo = None
 from config.config_loader import load_config
 from utils.logger import setup_logger, default_log_path
 from utils.mock_data import generate_mock_ohlcv
@@ -22,6 +27,38 @@ from data.processors import calculate_atr
 from data.macro_features import derive_macro_params
 
 KILLSWITCH_PATH = 'killswitch.lock'
+
+# US equity market session (Eastern). Stocks are flattened just before the
+# close so nothing carries overnight unprotected; crypto trades 24/7.
+MARKET_OPEN = dtime(9, 30)
+MARKET_CLOSE = dtime(16, 0)
+FLATTEN_START = dtime(15, 55)
+
+
+def now_eastern():
+    """Current time in US/Eastern, or None if zoneinfo/tzdata is unavailable."""
+    if ZoneInfo is None:
+        return None
+    try:
+        return datetime.now(ZoneInfo('America/New_York'))
+    except Exception:
+        return None
+
+
+def equity_market_open(now_et):
+    """True during regular US equity trading hours (Mon-Fri, 9:30-16:00 ET)."""
+    return (now_et is not None and now_et.weekday() < 5
+            and MARKET_OPEN <= now_et.time() < MARKET_CLOSE)
+
+
+def in_flatten_window(now_et):
+    """True in the last few minutes before the equity close (15:55-16:00 ET)."""
+    return (now_et is not None and now_et.weekday() < 5
+            and FLATTEN_START <= now_et.time() < MARKET_CLOSE)
+
+
+def _is_crypto(symbol):
+    return '/' in symbol
 
 DEFAULT_SYMBOLS = {
     'crypto': ['BTC/USD', 'ETH/USD', 'SOL/USD'],  # Alpaca crypto symbol format
@@ -57,6 +94,10 @@ class TradingBot:
         self.broker = self._init_broker(trading_cfg)
         # Software stop/target tracker for crypto (Alpaca can't bracket crypto).
         self.crypto_exits = CryptoExitTracker() if self.broker else None
+        # Flatten stock positions just before the close so nothing sits
+        # overnight unprotected (crypto is managed continuously and unaffected).
+        self.flatten_at_close = trading_cfg.get('flatten_at_close', True)
+        self._crypto_symbols = {s.replace('/', '').upper() for s in self.symbols.get('crypto', [])}
 
         self.pipeline = DataPipeline(self.config)
         self.combiner = SignalCombiner()
@@ -115,6 +156,8 @@ class TradingBot:
 
         # When mirroring to Alpaca, size off the real account and skip symbols
         # already held there. Fetch the account/positions once per cycle.
+        now_et = now_eastern()
+        flattening = self.flatten_at_close and in_flatten_window(now_et)
         alpaca_account = None
         alpaca_held = set()
         if self.broker:
@@ -122,6 +165,21 @@ class TradingBot:
                 alpaca_account = self.broker.get_account()
                 alpaca_positions = self.broker.get_positions()
                 alpaca_held = {p['symbol'] for p in alpaca_positions}
+
+                # End-of-day flatten: near the close, close stock positions so
+                # nothing carries overnight unprotected. Crypto is skipped (it
+                # trades 24/7 and is managed by its own software stops).
+                if flattening:
+                    for p in alpaca_positions:
+                        if p['symbol'].replace('/', '').upper() in self._crypto_symbols:
+                            continue
+                        try:
+                            self.broker.close_position(p['symbol'])
+                            alpaca_held.discard(p['symbol'])
+                            logger.info(f"Flattened {p['symbol']} at market close")
+                        except Exception as e:
+                            logger.error(f"Failed to flatten {p['symbol']}: {e}")
+
                 # Software stop/target for crypto: close any position whose
                 # tracked level has been touched (Alpaca can't bracket crypto).
                 for sym, reason in self.crypto_exits.positions_to_close(alpaca_positions):
@@ -192,6 +250,13 @@ class TradingBot:
                     continue
 
                 logger.info(f"Consensus Signal for {symbol}: {combined_signal.type} ({combined_signal.conviction.name})")
+
+                # Don't open new stock positions when the equity market is
+                # closed or in the end-of-day flatten window (they'd be rejected
+                # or flattened immediately). Crypto trades 24/7 and is exempt.
+                if self.broker and not _is_crypto(symbol) and (not equity_market_open(now_et) or flattening):
+                    logger.info(f"Skipping {symbol}: outside equity trading hours")
+                    continue
 
                 current_price = df['close'].iloc[-1]
 

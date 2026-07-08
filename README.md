@@ -115,6 +115,12 @@ level is touched on a later cycle. (Because exits are checked once per cycle,
 crypto stops are approximate — they act on the next cycle after a level is hit,
 not tick-by-tick.)
 
+**End-of-day flatten:** with `trading.flatten_at_close: true` (the default), the
+bot closes **stock** positions ~5 minutes before the US market close (and won't
+open new ones outside 9:30–16:00 ET), so nothing sits overnight unprotected.
+Crypto trades 24/7 and is unaffected. Set it to `false` to hold stocks overnight
+(their bracket stop/target may not persist past the session — see Alpaca docs).
+
 ### Live Dashboard
 
 The website surfaces the bot's live state (balance, open positions, PnL, macro

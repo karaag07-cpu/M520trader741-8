@@ -64,6 +64,15 @@ which are expanded from the environment at load time.
    With no keys set, every data source falls back to deterministic **mock
    data**, so the bot still runs end-to-end for development.
 
+   **Trading preferences** can also live in `.env` (so `git pull` never
+   conflicts with a tracked file):
+   ```bash
+   MINUTETRADER_BROKER=alpaca          # "paper" (simulator) or "alpaca"
+   MINUTETRADER_TRADE_CRYPTO=false     # turn crypto trading off
+   MINUTETRADER_TRADE_STOCKS=true      # turn stock trading on/off
+   ```
+   These override `settings.yaml`.
+
 3. Verify connectivity before running (checks account auth + market data):
    ```bash
    python scripts/check_alpaca.py      # expect ✅ ✅

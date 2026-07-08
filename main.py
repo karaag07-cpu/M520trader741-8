@@ -60,6 +60,14 @@ def in_flatten_window(now_et):
 def _is_crypto(symbol):
     return '/' in symbol
 
+
+def _env_bool(name, default=True):
+    """Read a truthy/falsey environment variable; unset -> default."""
+    val = os.environ.get(name)
+    if val is None:
+        return default
+    return val.strip().lower() in ('1', 'true', 'yes', 'on')
+
 DEFAULT_SYMBOLS = {
     'crypto': ['BTC/USD', 'ETH/USD', 'SOL/USD'],  # Alpaca crypto symbol format
     'stocks': ['AAPL', 'TSLA', 'QQQ'],
@@ -79,7 +87,14 @@ class TradingBot:
     def __init__(self, config=None, logger=None, symbols=None):
         self.config = config if config is not None else load_config()
         self.logger = logger or setup_logger('MinuteTrader', default_log_path('bot.log'))
-        self.symbols = symbols or DEFAULT_SYMBOLS
+        # Copy so env toggles don't mutate the module default.
+        self.symbols = symbols or {k: list(v) for k, v in DEFAULT_SYMBOLS.items()}
+        # Enable/disable asset classes from .env (gitignored) without editing
+        # code: MINUTETRADER_TRADE_CRYPTO / MINUTETRADER_TRADE_STOCKS = false.
+        if not _env_bool('MINUTETRADER_TRADE_CRYPTO', True):
+            self.symbols['crypto'] = []
+        if not _env_bool('MINUTETRADER_TRADE_STOCKS', True):
+            self.symbols['stocks'] = []
 
         trading_cfg = self.config.get('trading', {})
         self.risk_manager = RiskManager(risk_reward_ratio=trading_cfg.get('default_risk_reward', 3.0))
@@ -113,7 +128,10 @@ class TradingBot:
             self.logger.info("Alpaca broker enabled: orders will be mirrored to your Alpaca account")
 
     def _init_broker(self, trading_cfg):
-        if trading_cfg.get('broker', 'paper') != 'alpaca':
+        # MINUTETRADER_BROKER in .env overrides settings.yaml, so your live/paper
+        # choice can live in the gitignored .env instead of a tracked file.
+        broker_mode = os.environ.get('MINUTETRADER_BROKER') or trading_cfg.get('broker', 'paper')
+        if broker_mode != 'alpaca':
             return None
         alpaca_cfg = self.config.get('exchanges', {}).get('alpaca', {})
         if not (alpaca_cfg.get('api_key') and alpaca_cfg.get('api_secret')):

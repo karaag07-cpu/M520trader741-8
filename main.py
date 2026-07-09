@@ -61,6 +61,11 @@ def _is_crypto(symbol):
     return '/' in symbol
 
 
+def _norm_symbol(symbol):
+    """Normalise a symbol for matching (Alpaca reports 'BTCUSD', bot uses 'BTC/USD')."""
+    return str(symbol).replace('/', '').upper()
+
+
 def _env_bool(name, default=True):
     """Read a truthy/falsey environment variable; unset -> default."""
     val = os.environ.get(name)
@@ -182,18 +187,19 @@ class TradingBot:
             try:
                 alpaca_account = self.broker.get_account()
                 alpaca_positions = self.broker.get_positions()
-                alpaca_held = {p['symbol'] for p in alpaca_positions}
+                # Normalised so 'BTC/USD' (bot) matches 'BTCUSD' (Alpaca).
+                alpaca_held = {_norm_symbol(p['symbol']) for p in alpaca_positions}
 
                 # End-of-day flatten: near the close, close stock positions so
                 # nothing carries overnight unprotected. Crypto is skipped (it
                 # trades 24/7 and is managed by its own software stops).
                 if flattening:
                     for p in alpaca_positions:
-                        if p['symbol'].replace('/', '').upper() in self._crypto_symbols:
+                        if _norm_symbol(p['symbol']) in self._crypto_symbols:
                             continue
                         try:
                             self.broker.close_position(p['symbol'])
-                            alpaca_held.discard(p['symbol'])
+                            alpaca_held.discard(_norm_symbol(p['symbol']))
                             logger.info(f"Flattened {p['symbol']} at market close")
                         except Exception as e:
                             logger.error(f"Failed to flatten {p['symbol']}: {e}")
@@ -204,7 +210,7 @@ class TradingBot:
                     try:
                         self.broker.close_position(sym)
                         self.crypto_exits.discard(sym)
-                        alpaca_held.discard(sym)
+                        alpaca_held.discard(_norm_symbol(sym))
                         logger.info(f"Closed {sym} on Alpaca ({reason})")
                     except Exception as e:
                         logger.error(f"Failed to close {sym}: {e}")
@@ -315,7 +321,7 @@ class TradingBot:
                         # positions don't pile up. Equities get a bracket order
                         # (Alpaca manages the stop/target); crypto is a plain
                         # market order (see README on exit handling).
-                        if symbol in alpaca_held:
+                        if _norm_symbol(symbol) in alpaca_held:
                             continue
                         logger.info(
                             f"Submitting {symbol} to Alpaca: {combined_signal.type.value} "
@@ -327,7 +333,7 @@ class TradingBot:
                                 take_profit=levels['tp_levels'][0],
                                 stop_loss=levels['stop_loss'],
                             )
-                            alpaca_held.add(symbol)
+                            alpaca_held.add(_norm_symbol(symbol))
                             # Crypto has no Alpaca bracket — track its exit in software.
                             if '/' in symbol:
                                 self.crypto_exits.record(

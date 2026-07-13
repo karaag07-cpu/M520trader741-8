@@ -22,6 +22,7 @@ from execution.status_reporter import build_status, build_alpaca_status, write_s
 from execution.reconciliation import reconcile_paper_trader
 from execution.alpaca_broker import AlpacaBroker
 from execution.crypto_exits import CryptoExitTracker
+from execution.instance_lock import acquire as acquire_lock, release as release_lock
 from data.fetchers import DataPipeline
 from data.processors import calculate_atr
 from data.macro_features import derive_macro_params
@@ -442,9 +443,23 @@ def build_parser():
 def main(argv=None):
     args = build_parser().parse_args(argv)
     logger = setup_logger('MinuteTrader', default_log_path('bot.log'))
+
+    # Refuse to start if another bot is already running (prevents duplicate
+    # orders from multiple stray windows).
+    ok, holder = acquire_lock()
+    if not ok:
+        logger.error(f"Another MinuteTrader instance is already running (PID {holder}). "
+                     f"Exiting. Stop it first (taskkill /F /IM python.exe), or delete "
+                     f"bot.lock if you're sure it's stale.")
+        return 1
+
     logger.info("Starting MinuteTrader Bot with full Strategy Ensemble...")
-    bot = TradingBot(logger=logger)
-    bot.run(once=args.once, interval=args.interval, max_cycles=args.cycles)
+    try:
+        bot = TradingBot(logger=logger)
+        bot.run(once=args.once, interval=args.interval, max_cycles=args.cycles)
+    finally:
+        release_lock()
+    return 0
 
 
 if __name__ == "__main__":

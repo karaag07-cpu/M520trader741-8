@@ -23,3 +23,6 @@ broker_snapshot.json
 paper_state.json
 # Tracked crypto stop/target brackets (software exits)
 crypto_exits.json
+
+# Single-instance lock (runtime)
+bot.lock

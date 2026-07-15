@@ -324,6 +324,14 @@ class TradingBot:
                         # market order (see README on exit handling).
                         if _norm_symbol(symbol) in alpaca_held:
                             continue
+                        # Alpaca rejects fractional shares on bracket orders, so
+                        # round equities down to whole shares (crypto stays
+                        # fractional and uses plain market orders).
+                        if not _is_crypto(symbol):
+                            final_amount = float(int(final_amount))
+                            if final_amount < 1:
+                                logger.info(f"Skipping {symbol}: sizes to less than one whole share")
+                                continue
                         logger.info(
                             f"Submitting {symbol} to Alpaca: {combined_signal.type.value} "
                             f"qty {final_amount:.6f} (~${sizing['notional']:.2f})"
